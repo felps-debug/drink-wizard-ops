@@ -34,9 +34,13 @@
    eventId: string;
    insumoId: string;
    insumoName: string;
-   quantityOut: number;
-   quantityBack: number | null;
-   checkedBy: string | null;
+  qtySent: number;
+  qtyReceived: number | null;
+  qtyReturned: number | null;
+  notes: string | null;
+  entryStatus: "pendente" | "conferido";
+  exitStatus: "pendente" | "conferido";
+  unitPrice: number;
  }
  
  export interface CustoOperacional {
@@ -186,19 +190,19 @@
 
 // Mock checklist items
 export const checklistItems: ChecklistItem[] = [
-  { id: "1", eventId: "1", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 10, quantityBack: null, checkedBy: null },
-  { id: "2", eventId: "1", insumoId: "2", insumoName: "Whisky Jack Daniels", quantityOut: 5, quantityBack: null, checkedBy: null },
-  { id: "3", eventId: "1", insumoId: "3", insumoName: "Gin Tanqueray", quantityOut: 4, quantityBack: null, checkedBy: null },
-  { id: "4", eventId: "1", insumoId: "8", insumoName: "Gelo", quantityOut: 8, quantityBack: null, checkedBy: null },
-  { id: "5", eventId: "1", insumoId: "5", insumoName: "Limão Siciliano", quantityOut: 3, quantityBack: null, checkedBy: null },
-  { id: "6", eventId: "2", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 6, quantityBack: null, checkedBy: null },
-  { id: "7", eventId: "2", insumoId: "4", insumoName: "Rum Bacardi", quantityOut: 4, quantityBack: null, checkedBy: null },
-  { id: "8", eventId: "2", insumoId: "8", insumoName: "Gelo", quantityOut: 5, quantityBack: null, checkedBy: null },
-  { id: "9", eventId: "3", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 15, quantityBack: 5, checkedBy: "Maria Silva" },
-  { id: "10", eventId: "3", insumoId: "2", insumoName: "Whisky Jack Daniels", quantityOut: 8, quantityBack: 2, checkedBy: "Maria Silva" },
-  { id: "11", eventId: "3", insumoId: "3", insumoName: "Gin Tanqueray", quantityOut: 6, quantityBack: 1, checkedBy: "Maria Silva" },
-  { id: "12", eventId: "3", insumoId: "8", insumoName: "Gelo", quantityOut: 12, quantityBack: 0, checkedBy: "Maria Silva" },
-  { id: "13", eventId: "4", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 8, quantityBack: 3, checkedBy: "Maria Silva" },
-  { id: "14", eventId: "4", insumoId: "4", insumoName: "Rum Bacardi", quantityOut: 5, quantityBack: 2, checkedBy: "Maria Silva" },
-  { id: "15", eventId: "4", insumoId: "8", insumoName: "Gelo", quantityOut: 6, quantityBack: 0, checkedBy: "Maria Silva" },
+  { id: "1", eventId: "1", insumoId: "1", insumoName: "Vodka Absolut", qtySent: 10, qtyReceived: null, qtyReturned: null, notes: null, entryStatus: "pendente", exitStatus: "pendente", unitPrice: 89.90 },
+  { id: "2", eventId: "1", insumoId: "2", insumoName: "Whisky Jack Daniels", qtySent: 5, qtyReceived: null, qtyReturned: null, notes: null, entryStatus: "pendente", exitStatus: "pendente", unitPrice: 159.90 },
+  { id: "3", eventId: "1", insumoId: "3", insumoName: "Gin Tanqueray", qtySent: 4, qtyReceived: null, qtyReturned: null, notes: null, entryStatus: "pendente", exitStatus: "pendente", unitPrice: 129.90 },
+  { id: "4", eventId: "1", insumoId: "8", insumoName: "Gelo", qtySent: 8, qtyReceived: null, qtyReturned: null, notes: null, entryStatus: "pendente", exitStatus: "pendente", unitPrice: 15.00 },
+  { id: "5", eventId: "1", insumoId: "5", insumoName: "Limão Siciliano", qtySent: 3, qtyReceived: null, qtyReturned: null, notes: null, entryStatus: "pendente", exitStatus: "pendente", unitPrice: 12.90 },
+  { id: "6", eventId: "2", insumoId: "1", insumoName: "Vodka Absolut", qtySent: 6, qtyReceived: 6, qtyReturned: null, notes: null, entryStatus: "conferido", exitStatus: "pendente", unitPrice: 89.90 },
+  { id: "7", eventId: "2", insumoId: "4", insumoName: "Rum Bacardi", qtySent: 4, qtyReceived: 4, qtyReturned: null, notes: null, entryStatus: "conferido", exitStatus: "pendente", unitPrice: 59.90 },
+  { id: "8", eventId: "2", insumoId: "8", insumoName: "Gelo", qtySent: 5, qtyReceived: 5, qtyReturned: null, notes: null, entryStatus: "conferido", exitStatus: "pendente", unitPrice: 15.00 },
+  { id: "9", eventId: "3", insumoId: "1", insumoName: "Vodka Absolut", qtySent: 15, qtyReceived: 15, qtyReturned: 5, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 89.90 },
+  { id: "10", eventId: "3", insumoId: "2", insumoName: "Whisky Jack Daniels", qtySent: 8, qtyReceived: 8, qtyReturned: 2, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 159.90 },
+  { id: "11", eventId: "3", insumoId: "3", insumoName: "Gin Tanqueray", qtySent: 6, qtyReceived: 6, qtyReturned: 1, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 129.90 },
+  { id: "12", eventId: "3", insumoId: "8", insumoName: "Gelo", qtySent: 12, qtyReceived: 12, qtyReturned: 0, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 15.00 },
+  { id: "13", eventId: "4", insumoId: "1", insumoName: "Vodka Absolut", qtySent: 8, qtyReceived: 8, qtyReturned: 3, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 89.90 },
+  { id: "14", eventId: "4", insumoId: "4", insumoName: "Rum Bacardi", qtySent: 5, qtyReceived: 5, qtyReturned: 2, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 59.90 },
+  { id: "15", eventId: "4", insumoId: "8", insumoName: "Gelo", qtySent: 6, qtyReceived: 6, qtyReturned: 0, notes: null, entryStatus: "conferido", exitStatus: "conferido", unitPrice: 15.00 },
 ];
