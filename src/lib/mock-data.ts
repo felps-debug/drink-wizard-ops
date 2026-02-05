@@ -183,3 +183,22 @@
      year: "numeric",
    });
  };
+
+// Mock checklist items
+export const checklistItems: ChecklistItem[] = [
+  { id: "1", eventId: "1", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 10, quantityBack: null, checkedBy: null },
+  { id: "2", eventId: "1", insumoId: "2", insumoName: "Whisky Jack Daniels", quantityOut: 5, quantityBack: null, checkedBy: null },
+  { id: "3", eventId: "1", insumoId: "3", insumoName: "Gin Tanqueray", quantityOut: 4, quantityBack: null, checkedBy: null },
+  { id: "4", eventId: "1", insumoId: "8", insumoName: "Gelo", quantityOut: 8, quantityBack: null, checkedBy: null },
+  { id: "5", eventId: "1", insumoId: "5", insumoName: "Limão Siciliano", quantityOut: 3, quantityBack: null, checkedBy: null },
+  { id: "6", eventId: "2", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 6, quantityBack: null, checkedBy: null },
+  { id: "7", eventId: "2", insumoId: "4", insumoName: "Rum Bacardi", quantityOut: 4, quantityBack: null, checkedBy: null },
+  { id: "8", eventId: "2", insumoId: "8", insumoName: "Gelo", quantityOut: 5, quantityBack: null, checkedBy: null },
+  { id: "9", eventId: "3", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 15, quantityBack: 5, checkedBy: "Maria Silva" },
+  { id: "10", eventId: "3", insumoId: "2", insumoName: "Whisky Jack Daniels", quantityOut: 8, quantityBack: 2, checkedBy: "Maria Silva" },
+  { id: "11", eventId: "3", insumoId: "3", insumoName: "Gin Tanqueray", quantityOut: 6, quantityBack: 1, checkedBy: "Maria Silva" },
+  { id: "12", eventId: "3", insumoId: "8", insumoName: "Gelo", quantityOut: 12, quantityBack: 0, checkedBy: "Maria Silva" },
+  { id: "13", eventId: "4", insumoId: "1", insumoName: "Vodka Absolut", quantityOut: 8, quantityBack: 3, checkedBy: "Maria Silva" },
+  { id: "14", eventId: "4", insumoId: "4", insumoName: "Rum Bacardi", quantityOut: 5, quantityBack: 2, checkedBy: "Maria Silva" },
+  { id: "15", eventId: "4", insumoId: "8", insumoName: "Gelo", quantityOut: 6, quantityBack: 0, checkedBy: "Maria Silva" },
+];
