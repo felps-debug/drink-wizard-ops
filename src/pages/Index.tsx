@@ -32,10 +32,10 @@ const Index = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <Card>
+          <Card className="stat-card-gradient border-0">
             <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Calendar className="h-5 w-5 text-primary" />
+              <div className="btn-gradient-dark flex h-10 w-10 items-center justify-center rounded-full">
+                <Calendar className="h-5 w-5 text-white" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{scheduledEvents}</p>
@@ -44,10 +44,10 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="stat-card-gradient border-0">
             <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
-                <TrendingUp className="h-5 w-5 text-success" />
+              <div className="btn-gradient-dark flex h-10 w-10 items-center justify-center rounded-full">
+                <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{activeEvents}</p>
@@ -58,10 +58,10 @@ const Index = () => {
 
           {currentUser.role === "admin" && (
             <>
-              <Card>
+              <Card className="stat-card-gradient border-0">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent">
-                    <DollarSign className="h-5 w-5 text-accent-foreground" />
+                  <div className="btn-gradient-dark flex h-10 w-10 items-center justify-center rounded-full">
+                    <DollarSign className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-lg font-bold">{formatCurrency(totalRevenue)}</p>
@@ -70,10 +70,10 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="stat-card-gradient border-0">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-                    <Package className="h-5 w-5 text-secondary-foreground" />
+                  <div className="btn-gradient-dark flex h-10 w-10 items-center justify-center rounded-full">
+                    <Package className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">10</p>
@@ -86,7 +86,7 @@ const Index = () => {
         </div>
 
         {/* Upcoming Events */}
-        <Card>
+        <Card className="card-gradient border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base">Próximos Eventos</CardTitle>
             <Link to="/eventos">
@@ -101,7 +101,7 @@ const Index = () => {
               <Link
                 key={event.id}
                 to={`/eventos/${event.id}`}
-                className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                className="btn-gradient flex items-center justify-between rounded-lg border border-white/50 p-3 transition-all hover:shadow-md"
               >
                 <div className="space-y-1">
                   <p className="font-medium leading-tight">{event.clientName}</p>
@@ -124,19 +124,19 @@ const Index = () => {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="card-gradient border-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Ações Rápidas</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Link to="/eventos/novo">
-              <Button variant="outline" className="h-auto w-full flex-col gap-1 py-4">
+              <Button variant="outline" className="btn-gradient h-auto w-full flex-col gap-1 border-white/50 py-4 hover:shadow-md">
                 <Calendar className="h-5 w-5" />
                 <span className="text-xs">Novo Evento</span>
               </Button>
             </Link>
             <Link to="/insumos">
-              <Button variant="outline" className="h-auto w-full flex-col gap-1 py-4">
+              <Button variant="outline" className="btn-gradient h-auto w-full flex-col gap-1 border-white/50 py-4 hover:shadow-md">
                 <Package className="h-5 w-5" />
                 <span className="text-xs">Ver Insumos</span>
               </Button>

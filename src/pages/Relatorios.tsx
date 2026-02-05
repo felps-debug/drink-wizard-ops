@@ -37,30 +37,36 @@
        <div className="space-y-6 p-4">
          {/* Summary Cards */}
          <div className="grid grid-cols-2 gap-3">
-           <Card>
+          <Card className="stat-card-gradient border-0">
              <CardContent className="p-4">
                <div className="flex items-center gap-2 text-muted-foreground">
-                 <DollarSign className="h-4 w-4" />
+                <div className="btn-gradient-dark flex h-6 w-6 items-center justify-center rounded-full">
+                  <DollarSign className="h-3.5 w-3.5 text-white" />
+                </div>
                  <span className="text-xs">Faturamento</span>
                </div>
                <p className="mt-1 text-xl font-bold">{formatCurrency(totalRevenue)}</p>
              </CardContent>
            </Card>
  
-           <Card>
+          <Card className="stat-card-gradient border-0">
              <CardContent className="p-4">
                <div className="flex items-center gap-2 text-muted-foreground">
-                 <TrendingDown className="h-4 w-4" />
+                <div className="btn-gradient-dark flex h-6 w-6 items-center justify-center rounded-full">
+                  <TrendingDown className="h-3.5 w-3.5 text-white" />
+                </div>
                  <span className="text-xs">Custos</span>
                </div>
                <p className="mt-1 text-xl font-bold">{formatCurrency(totalCosts)}</p>
              </CardContent>
            </Card>
  
-           <Card>
+          <Card className="stat-card-gradient border-0">
              <CardContent className="p-4">
                <div className="flex items-center gap-2 text-muted-foreground">
-                 <TrendingUp className="h-4 w-4" />
+                <div className="btn-gradient-dark flex h-6 w-6 items-center justify-center rounded-full">
+                  <TrendingUp className="h-3.5 w-3.5 text-white" />
+                </div>
                  <span className="text-xs">Lucro Bruto</span>
                </div>
                <p className="mt-1 text-xl font-bold text-success">
@@ -69,10 +75,12 @@
              </CardContent>
            </Card>
  
-           <Card>
+          <Card className="stat-card-gradient border-0">
              <CardContent className="p-4">
                <div className="flex items-center gap-2 text-muted-foreground">
-                 <Calendar className="h-4 w-4" />
+                <div className="btn-gradient-dark flex h-6 w-6 items-center justify-center rounded-full">
+                  <Calendar className="h-3.5 w-3.5 text-white" />
+                </div>
                  <span className="text-xs">Eventos</span>
                </div>
                <p className="mt-1 text-xl font-bold">{completedEvents.length}</p>
@@ -81,7 +89,7 @@
          </div>
  
          {/* Profit Margin */}
-         <Card>
+        <Card className="card-gradient border-0">
            <CardHeader className="pb-2">
              <CardTitle className="text-base">Margem de Lucro</CardTitle>
            </CardHeader>
@@ -102,7 +110,7 @@
          </Card>
  
          {/* Events Performance */}
-         <Card>
+        <Card className="card-gradient border-0">
            <CardHeader className="pb-2">
              <CardTitle className="text-base">Eventos Finalizados</CardTitle>
            </CardHeader>
@@ -120,7 +128,7 @@
                return (
                  <div
                    key={event.id}
-                   className="flex items-center justify-between rounded-lg border p-3"
+                  className="btn-gradient flex items-center justify-between rounded-lg border border-white/50 p-3"
                  >
                    <div>
                      <p className="font-medium">{event.clientName}</p>
@@ -149,7 +157,7 @@
          </Card>
  
          {/* Costs Breakdown */}
-         <Card>
+        <Card className="card-gradient border-0">
            <CardHeader className="pb-2">
              <CardTitle className="text-base">Custos Operacionais</CardTitle>
            </CardHeader>

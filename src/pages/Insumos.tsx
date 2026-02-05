@@ -34,13 +34,13 @@
      <AppLayout title="Insumos">
        <div className="space-y-4 p-4">
          {/* Search */}
-         <div className="relative">
+        <div className="relative btn-gradient rounded-md">
            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
            <Input
              placeholder="Buscar insumo..."
              value={search}
              onChange={(e) => setSearch(e.target.value)}
-             className="pl-9"
+            className="border-white/50 bg-transparent pl-9"
            />
          </div>
  
@@ -49,10 +49,10 @@
            {categories.map((cat) => (
              <Button
                key={cat}
-               variant={categoryFilter === cat ? "default" : "outline"}
+              variant={categoryFilter === cat ? "default" : "ghost"}
                size="sm"
                onClick={() => setCategoryFilter(cat)}
-               className="shrink-0"
+              className={categoryFilter === cat ? "btn-gradient-dark shrink-0 text-white" : "btn-gradient shrink-0"}
              >
                {cat === "all" ? "Todos" : cat}
              </Button>
@@ -66,14 +66,14 @@
                <h3 className="mb-3 text-sm font-medium text-muted-foreground">{category}</h3>
                <div className="space-y-2">
                  {items.map((insumo) => (
-                   <Card key={insumo.id}>
+                  <Card key={insumo.id} className="card-gradient border-0">
                      <CardContent className="flex items-center justify-between p-4">
                        <div>
                          <p className="font-medium">{insumo.name}</p>
                          <p className="text-sm text-muted-foreground">{insumo.unit}</p>
                        </div>
                        {currentUser.role === "admin" && (
-                         <Badge variant="secondary" className="font-mono">
+                        <Badge variant="secondary" className="btn-gradient font-mono">
                            {formatCurrency(insumo.currentPrice)}
                          </Badge>
                        )}
@@ -95,7 +95,7 @@
          {currentUser.role === "admin" && (
            <Button
              size="lg"
-             className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg"
+            className="btn-gradient-dark fixed bottom-24 right-4 h-14 w-14 rounded-full text-white shadow-lg"
            >
              <Plus className="h-6 w-6" />
            </Button>

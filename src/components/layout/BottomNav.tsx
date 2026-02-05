@@ -14,7 +14,7 @@
    const location = useLocation();
  
    return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm safe-area-bottom">
+    <nav className="header-gradient fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-sm safe-area-bottom">
        <div className="flex items-center justify-around py-2">
          {navItems.map((item) => {
            const isActive = location.pathname === item.path;
