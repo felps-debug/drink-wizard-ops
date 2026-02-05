@@ -4,13 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { toast } from "@/components/ui/use-toast";
-import {
-  eventos,
-  checklistItems,
-  ChecklistItem,
-} from "@/lib/mock-data";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { ChecklistItem, checklistItems as mockChecklistItems } from "@/lib/mock-data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,30 +17,45 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useEvent } from "@/hooks/useEvents";
 
 export default function ChecklistEntrada() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const evento = eventos.find((e) => e.id === id);
-  const eventChecklist = checklistItems.filter((item) => item.eventId === id);
-
-  const [items, setItems] = useState<ChecklistItem[]>(
-    eventChecklist.map((item) => ({
-      ...item,
-      qtyReceived: item.qtyReceived ?? item.qtySent,
-    }))
-  );
+  // Use hook to fetch real data
+  const { event: evento, checklists, saveChecklist } = useEvent(id);
+  const [items, setItems] = useState<ChecklistItem[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Initialize Items
+  useEffect(() => {
+    if (checklists && checklists.length > 0) {
+      const entrada = checklists.find(c => c.type === 'entrada');
+      if (entrada && entrada.items) {
+        // Safe check for JSON format, assuming simple array of ChecklistItem
+         setItems(entrada.items as ChecklistItem[])
+      } else {
+        // Fallback to mock logic if new
+        // Ideally should fetch "Planned Items" for this event. 
+        // For now using mock template
+        const mockTemplate = mockChecklistItems.filter((item) => item.eventId === '1'); // Check mocks
+        // If empty, map empty
+        setItems(mockTemplate.map(i => ({...i, eventId: id || '', qtyReceived: i.qtySent})));
+      }
+    } else {
+         // Fallback default
+         const mockTemplate = mockChecklistItems.filter((item) => item.eventId === '1'); 
+         setItems(mockTemplate.map(i => ({...i, eventId: id || '', qtyReceived: i.qtySent})));
+    }
+  }, [checklists, id]);
+
 
   if (!evento) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-muted-foreground">Evento não encontrado</p>
-          <Button variant="link" onClick={() => navigate("/eventos")} className="text-primary">
-            Voltar para eventos
-          </Button>
+          <p className="text-muted-foreground">Evento não encontrado/Carregando...</p>
         </div>
       </div>
     );
@@ -88,23 +99,25 @@ export default function ChecklistEntrada() {
 
   const handleConfirmEntry = () => {
     if (hasUnresolvedDivergences) {
-      toast({
-        title: "Divergências pendentes",
-        description: "Adicione uma justificativa para todos os itens com divergência.",
-        variant: "destructive",
-      });
+      toast.error("Adicione uma justificativa para todos os itens com divergência.");
       return;
     }
     setShowConfirmDialog(true);
   };
 
-  const handleSubmit = () => {
-    // Aqui salvaria no banco/localStorage
-    toast({
-      title: "Entrada confirmada!",
-      description: "O checklist de entrada foi salvo com sucesso.",
-    });
-    navigate(`/eventos/${id}`);
+  const handleSubmit = async () => {
+    if (!id) return;
+    try {
+      await saveChecklist.mutateAsync({
+        eventId: id,
+        type: 'entrada',
+        items: items,
+        status: 'conferido'
+      });
+      navigate(`/eventos/${id}`);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -193,9 +206,9 @@ export default function ChecklistEntrada() {
         <Button
           className="w-full min-h-[48px]"
           onClick={handleConfirmEntry}
-          disabled={hasUnresolvedDivergences}
+          disabled={hasUnresolvedDivergences || saveChecklist.isPending}
         >
-          Confirmar Entrada
+          {saveChecklist.isPending ? "Salvando..." : "Confirmar Entrada"}
         </Button>
         {hasUnresolvedDivergences && (
           <p className="mt-2 text-center text-xs text-warning">

@@ -4,25 +4,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  eventos,
-  checklistItems,
   formatCurrency,
   formatDate,
   getStatusColor,
   getStatusLabel,
-  currentUser,
 } from "@/lib/mock-data";
+import { useAuth } from "@/context/AuthContext";
+import { useEvent } from "@/hooks/useEvents";
 
 export default function EventoDetalhe() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  
+  const { event: evento, checklists, isLoading } = useEvent(id);
 
-  const evento = eventos.find((e) => e.id === id);
-  const eventChecklist = checklistItems.filter((item) => item.eventId === id);
+  // Derive status from checklists (if using JSONB items structure, logic adapts)
+  // For now, checks if there is a checklist of type 'entrada' and 'saida'
+  const entryChecklist = checklists.find(c => c.type === 'entrada');
+  const exitChecklist = checklists.find(c => c.type === 'saida');
 
-  // Calcular status dos checklists
-  const entryComplete = eventChecklist.length > 0 && eventChecklist.every((item) => item.entryStatus === "conferido");
-  const exitComplete = eventChecklist.length > 0 && eventChecklist.every((item) => item.exitStatus === "conferido");
+  const entryComplete = !!entryChecklist && entryChecklist.status === 'conferido';
+  const exitComplete = !!exitChecklist && exitChecklist.status === 'conferido';
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="font-mono animate-pulse">CARREGANDO...</p>
+      </div>
+    );
+  }
 
   if (!evento) {
     return (
@@ -37,7 +48,7 @@ export default function EventoDetalhe() {
     );
   }
 
-  const canEdit = currentUser.role === "admin" || currentUser.role === "chefe_bar";
+  const canEdit = user && (user.role === "admin" || user.role === "chefe_bar");
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -73,7 +84,7 @@ export default function EventoDetalhe() {
                 <Calendar className="h-4 w-4 text-primary" />
                 <span>{formatDate(evento.date)}</span>
               </div>
-              {currentUser.role === "admin" && (
+              {user && user.role === "admin" && (
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
                   <DollarSign className="h-4 w-4" />
                   <span>{formatCurrency(evento.contractValue)}</span>
@@ -87,11 +98,19 @@ export default function EventoDetalhe() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Checklists</h2>
 
-          {eventChecklist.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              Nenhum item cadastrado para este evento
-            </p>
-          ) : (
+          {/* Logic adapted for new Checklists table structure: 1 row per checklist type, JSON items */}
+          {checklists.length === 0 && (
+            <div className="py-8 text-center text-muted-foreground border-2 border-dashed border-white/10 rounded-lg">
+              <p>Nenhum checklist iniciado.</p>
+              {canEdit && (
+                 <Button variant="link" className="text-primary mt-2">
+                   Iniciar Checklist de Entrada
+                 </Button>
+              )}
+            </div>
+          )}
+
+          {checklists.length > 0 || canEdit ? (
             <div className="space-y-3">
               {/* Botão Checklist Entrada */}
               <Link to={`/eventos/${id}/checklist-entrada`}>
@@ -164,7 +183,7 @@ export default function EventoDetalhe() {
                 </Button>
               </Link>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
