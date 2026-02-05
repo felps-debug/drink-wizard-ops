@@ -18,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 10%;
 
-    --primary: 262 83% 58%;
+    --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -27,8 +27,8 @@
     --muted: 220 14% 96%;
     --muted-foreground: 220 10% 46%;
 
-    --accent: 262 83% 95%;
-    --accent-foreground: 262 83% 40%;
+    --accent: 0 72% 95%;
+    --accent-foreground: 0 72% 40%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
@@ -41,7 +41,7 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 262 83% 58%;
+    --ring: 0 72% 51%;
 
     --radius: 0.5rem;
 
@@ -52,7 +52,11 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-ring: 0 72% 51%;
+
+    /* Gradient from button */
+    --gradient-primary: radial-gradient(67.54% 100.03% at 50% 0%, #FFEBEE 0%, #FFCDD2 25.48%, #E57373 62.5%, #C62828 100%);
+    --gradient-glow: 0 5.98px 23.203px 0 rgba(198, 40, 40, 0.20), 0 14.352px 53.701px 0 rgba(198, 40, 40, 0.50);
   }
 
   .dark {
@@ -65,7 +69,7 @@
     --popover: 220 20% 12%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 262 83% 65%;
+    --primary: 0 72% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 20% 18%;
@@ -74,8 +78,8 @@
     --muted: 220 20% 18%;
     --muted-foreground: 220 10% 60%;
 
-    --accent: 262 83% 20%;
-    --accent-foreground: 262 83% 80%;
+    --accent: 0 72% 20%;
+    --accent-foreground: 0 72% 80%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
@@ -88,16 +92,18 @@
 
     --border: 220 20% 20%;
     --input: 220 20% 20%;
-    --ring: 262 83% 65%;
+    --ring: 0 72% 55%;
 
     --sidebar-background: 220 20% 10%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 262 83% 65%;
+    --sidebar-primary: 0 72% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 20% 15%;
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 262 83% 65%;
+    --sidebar-ring: 0 72% 55%;
+
+    --gradient-primary: radial-gradient(67.54% 100.03% at 50% 0%, #3D1A1A 0%, #4A1515 25.48%, #6B2020 62.5%, #8B2525 100%);
   }
 }
 
@@ -114,5 +120,9 @@
 @layer utilities {
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bg-gradient-radial {
+    background: var(--gradient-primary);
   }
 }
