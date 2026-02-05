@@ -1,51 +1,68 @@
 
 
-# Plano: Página de Detalhes do Evento com Checklist
+# Plano: Refatoração do Módulo de Checklists (Conforme PRD)
 
-## O que será criado
+## Problema Atual
+A implementação atual usa tabs simples com checkboxes e inputs. O PRD exige um fluxo diferente com dashboard de botões, controles +/-, e regras de negócio específicas.
 
-### 1. Nova página: `src/pages/EventoDetalhe.tsx`
-- Exibe dados do evento (cliente, telefone, local, data, valor)
-- Tabs: "Checklist Entrada" e "Checklist Saída"
-- Lista de insumos com quantidade enviada/retornada
-- Cálculo automático de consumo real
-- Registro de quem conferiu
+## Mudanças Necessárias
 
-### 2. Nova rota no `App.tsx`
-```text
-/eventos/:id → EventoDetalhe
+### 1. Estrutura de Dados (`mock-data.ts`)
+Ajustar `ChecklistItem` para ter os campos do PRD:
+- `qty_sent` (enviado pelo Admin)
+- `qty_received` (confirmado na entrada)
+- `qty_returned` (sobras na saída)
+- `notes` (observações)
+- `status` (pendente/conferido)
+
+### 2. Dashboard do Evento (`EventoDetalhe.tsx`)
+Transformar a tela atual em:
 ```
-
-### 3. Mock data adicional
-- Adicionar `checklistItems` de exemplo no `mock-data.ts`
-
-## Estrutura da Interface
-
-```text
 ┌─────────────────────────────────┐
-│ ← Voltar     Casamento Silva    │
+│ Casamento Silva                 │
+│ 15/02/2026                      │
 ├─────────────────────────────────┤
-│ 📍 Espaço Villa Garden          │
-│ 📞 (11) 99999-1111              │
-│ 📅 15/02/2026    💰 R$ 8.500    │
-├─────────────────────────────────┤
-│  [Entrada]  [Saída]             │
-├─────────────────────────────────┤
-│ ☑ Vodka Absolut                 │
-│   Saída: 10  │  Retorno: 3      │
-│   Consumo: 7                    │
-├─────────────────────────────────┤
-│ ☑ Gelo (saco 5kg)               │
-│   Saída: 5   │  Retorno: 0      │
-│   Consumo: 5                    │
+│ [CHECKLIST ENTRADA]  ✓ Concluído│
+│ [CHECKLIST SAÍDA]    ⏳ Pendente │
 └─────────────────────────────────┘
 ```
+- Botões grandes (mín 44x44px)
+- AC1: Bloquear "Saída" até "Entrada" concluído
 
-## Arquivos a criar/editar
+### 3. Tela Checklist Entrada (`ChecklistEntrada.tsx`)
+Nova página com:
+- Cards por item com botões `[-]` `[QTD]` `[+]`
+- Comparar `qty_sent` vs `qty_received`
+- AC2: Exigir justificativa se divergência
+- Botão "Confirmar Entrada"
+
+### 4. Tela Checklist Saída (`ChecklistSaida.tsx`)
+Nova página com:
+- Mesmos controles +/-
+- Campo `qty_returned`
+- Cálculo automático: `Consumo = qty_received - qty_returned`
+- Botão "Salvar e Finalizar"
+- AC4: Confirmação extra antes de enviar
+
+### 5. Resumo de Encerramento
+Modal ou tela mostrando:
+- Total consumido por item
+- AC3: Cálculo de custo baseado em preços
+
+### 6. Rotas Novas (`App.tsx`)
+```
+/eventos/:id                → Dashboard
+/eventos/:id/checklist-entrada → Entrada
+/eventos/:id/checklist-saida   → Saída
+```
+
+## Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/EventoDetalhe.tsx` | Criar |
-| `src/App.tsx` | Adicionar rota |
-| `src/lib/mock-data.ts` | Adicionar dados de checklist |
+| `src/lib/mock-data.ts` | Atualizar tipos |
+| `src/pages/EventoDetalhe.tsx` | Refatorar para dashboard |
+| `src/pages/ChecklistEntrada.tsx` | Criar |
+| `src/pages/ChecklistSaida.tsx` | Criar |
+| `src/App.tsx` | Adicionar rotas |
 
