@@ -26,7 +26,9 @@ const Index = () => {
       <div className="space-y-6 p-4">
         {/* Welcome */}
         <div>
-          <h2 className="text-2xl font-bold">Olá, {currentUser.name.split(" ")[0]}!</h2>
+          <h2 className="text-2xl font-bold">
+            Olá, <span className="text-primary">{currentUser.name.split(" ")[0]}</span>!
+          </h2>
           <p className="text-muted-foreground">Aqui está o resumo do seu dia</p>
         </div>
 
@@ -90,7 +92,7 @@ const Index = () => {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base">Próximos Eventos</CardTitle>
             <Link to="/eventos">
-              <Button variant="ghost" size="sm" className="h-8 text-xs">
+              <Button variant="ghost" size="sm" className="h-8 text-xs text-primary hover:text-primary">
                 Ver todos
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
@@ -130,14 +132,14 @@ const Index = () => {
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Link to="/eventos/novo">
-              <Button variant="outline" className="btn-gradient h-auto w-full flex-col gap-1 border-white/50 py-4 hover:shadow-md">
-                <Calendar className="h-5 w-5" />
+              <Button variant="outline" className="btn-gradient h-auto w-full flex-col gap-1 border-white/50 py-4 hover:shadow-md hover:border-primary/30">
+                <Calendar className="h-5 w-5 text-primary" />
                 <span className="text-xs">Novo Evento</span>
               </Button>
             </Link>
             <Link to="/insumos">
-              <Button variant="outline" className="btn-gradient h-auto w-full flex-col gap-1 border-white/50 py-4 hover:shadow-md">
-                <Package className="h-5 w-5" />
+              <Button variant="outline" className="btn-gradient h-auto w-full flex-col gap-1 border-white/50 py-4 hover:shadow-md hover:border-primary/30">
+                <Package className="h-5 w-5 text-primary" />
                 <span className="text-xs">Ver Insumos</span>
               </Button>
             </Link>

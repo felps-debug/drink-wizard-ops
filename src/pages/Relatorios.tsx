@@ -16,7 +16,7 @@
        <AppLayout title="Relatórios">
          <div className="flex min-h-[60vh] items-center justify-center p-4">
            <div className="text-center">
-             <p className="text-lg font-medium">Acesso Restrito</p>
+            <p className="text-lg font-medium text-primary">Acesso Restrito</p>
              <p className="text-muted-foreground">
                Apenas administradores podem visualizar relatórios financeiros.
              </p>
@@ -45,7 +45,7 @@
                 </div>
                  <span className="text-xs">Faturamento</span>
                </div>
-               <p className="mt-1 text-xl font-bold">{formatCurrency(totalRevenue)}</p>
+              <p className="mt-1 text-xl font-bold text-primary">{formatCurrency(totalRevenue)}</p>
              </CardContent>
            </Card>
  
@@ -96,7 +96,7 @@
            <CardContent>
              <div className="flex items-end justify-between">
                <div>
-                 <p className="text-3xl font-bold">{profitMargin.toFixed(1)}%</p>
+                <p className="text-3xl font-bold text-primary">{profitMargin.toFixed(1)}%</p>
                  <p className="text-sm text-muted-foreground">sobre o faturamento</p>
                </div>
                <Badge
@@ -133,7 +133,7 @@
                    <div>
                      <p className="font-medium">{event.clientName}</p>
                      <p className="text-xs text-muted-foreground">
-                       Contrato: {formatCurrency(event.contractValue)}
+                      Contrato: <span className="text-primary">{formatCurrency(event.contractValue)}</span>
                      </p>
                    </div>
                    <div className="text-right">
@@ -169,7 +169,7 @@
                >
                  <div>
                    <p className="text-sm font-medium">{custo.description}</p>
-                   <p className="text-xs text-muted-foreground">{custo.category}</p>
+                  <p className="text-xs text-primary">{custo.category}</p>
                  </div>
                  <p className="font-mono text-sm">{formatCurrency(custo.value)}</p>
                </div>

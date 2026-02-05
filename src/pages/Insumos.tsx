@@ -35,7 +35,7 @@
        <div className="space-y-4 p-4">
          {/* Search */}
         <div className="relative btn-gradient rounded-md">
-           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
            <Input
              placeholder="Buscar insumo..."
              value={search}
@@ -52,7 +52,7 @@
               variant={categoryFilter === cat ? "default" : "ghost"}
                size="sm"
                onClick={() => setCategoryFilter(cat)}
-              className={categoryFilter === cat ? "btn-gradient-dark shrink-0 text-white" : "btn-gradient shrink-0"}
+              className={categoryFilter === cat ? "shrink-0 bg-primary text-white hover:bg-primary/90" : "btn-gradient shrink-0"}
              >
                {cat === "all" ? "Todos" : cat}
              </Button>
@@ -63,7 +63,7 @@
          <div className="space-y-6">
            {Object.entries(groupedInsumos).map(([category, items]) => (
              <div key={category}>
-               <h3 className="mb-3 text-sm font-medium text-muted-foreground">{category}</h3>
+              <h3 className="mb-3 text-sm font-medium text-primary">{category}</h3>
                <div className="space-y-2">
                  {items.map((insumo) => (
                   <Card key={insumo.id} className="card-gradient border-0">
@@ -73,7 +73,7 @@
                          <p className="text-sm text-muted-foreground">{insumo.unit}</p>
                        </div>
                        {currentUser.role === "admin" && (
-                        <Badge variant="secondary" className="btn-gradient font-mono">
+                        <Badge variant="secondary" className="bg-primary/10 font-mono text-primary">
                            {formatCurrency(insumo.currentPrice)}
                          </Badge>
                        )}
@@ -95,7 +95,7 @@
          {currentUser.role === "admin" && (
            <Button
              size="lg"
-            className="btn-gradient-dark fixed bottom-24 right-4 h-14 w-14 rounded-full text-white shadow-lg"
+            className="fixed bottom-24 right-4 h-14 w-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90"
            >
              <Plus className="h-6 w-6" />
            </Button>

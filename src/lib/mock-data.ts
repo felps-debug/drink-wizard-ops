@@ -141,9 +141,9 @@
  // Helper functions
  export const getStatusColor = (status: Evento["status"]) => {
    const colors = {
-     agendado: "bg-secondary text-secondary-foreground",
+    agendado: "bg-primary/10 text-primary",
      montagem: "bg-warning text-warning-foreground",
-     em_curso: "bg-primary text-primary-foreground",
+    em_curso: "bg-primary text-primary-foreground",
      finalizado: "bg-success text-success-foreground",
    };
    return colors[status];
