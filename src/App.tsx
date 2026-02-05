@@ -10,6 +10,8 @@ import Insumos from "./pages/Insumos";
 import Equipe from "./pages/Equipe";
 import Relatorios from "./pages/Relatorios";
 import EventoDetalhe from "./pages/EventoDetalhe";
+import ChecklistEntrada from "./pages/ChecklistEntrada";
+import ChecklistSaida from "./pages/ChecklistSaida";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/eventos/:id" element={<EventoDetalhe />} />
+          <Route path="/eventos/:id/checklist-entrada" element={<ChecklistEntrada />} />
+          <Route path="/eventos/:id/checklist-saida" element={<ChecklistSaida />} />
           <Route path="/insumos" element={<Insumos />} />
           <Route path="/equipe" element={<Equipe />} />
           <Route path="/relatorios" element={<Relatorios />} />
