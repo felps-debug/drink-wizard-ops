@@ -42,7 +42,7 @@
        <div className="space-y-4 p-4">
          {/* Search */}
         <div className="relative btn-gradient rounded-md">
-           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
            <Input
              placeholder="Buscar membro..."
              value={search}
@@ -56,8 +56,8 @@
            {filteredUsers.map((user) => (
             <Card key={user.id} className="card-gradient border-0">
                <CardContent className="flex items-center gap-4 p-4">
-                <Avatar className="h-12 w-12 btn-gradient-dark">
-                  <AvatarFallback className="bg-transparent text-white">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                      {getInitials(user.name)}
                    </AvatarFallback>
                  </Avatar>
@@ -98,7 +98,7 @@
          {currentUser.role === "admin" && (
            <Button
              size="lg"
-            className="btn-gradient-dark fixed bottom-24 right-4 h-14 w-14 rounded-full text-white shadow-lg"
+            className="fixed bottom-24 right-4 h-14 w-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90"
            >
              <Plus className="h-6 w-6" />
            </Button>

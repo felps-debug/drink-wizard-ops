@@ -40,7 +40,7 @@
        <div className="space-y-4 p-4">
          {/* Search */}
         <div className="relative btn-gradient rounded-md">
-           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
            <Input
              placeholder="Buscar evento..."
              value={search}
@@ -57,7 +57,7 @@
               variant={filter === s.value ? "default" : "ghost"}
                size="sm"
                onClick={() => setFilter(s.value)}
-              className={filter === s.value ? "btn-gradient-dark shrink-0 text-white" : "btn-gradient shrink-0"}
+              className={filter === s.value ? "shrink-0 bg-primary text-white hover:bg-primary/90" : "btn-gradient shrink-0"}
              >
                {s.label}
              </Button>
@@ -94,7 +94,7 @@
                      <div className="text-right">
                        <p className="text-sm font-medium">{formatDate(event.date)}</p>
                        {currentUser.role === "admin" && (
-                         <p className="text-sm text-muted-foreground">
+                        <p className="text-sm font-medium text-primary">
                            {formatCurrency(event.contractValue)}
                          </p>
                        )}
@@ -117,7 +117,7 @@
            <Link to="/eventos/novo">
              <Button
                size="lg"
-              className="btn-gradient-dark fixed bottom-24 right-4 h-14 w-14 rounded-full text-white shadow-lg"
+              className="fixed bottom-24 right-4 h-14 w-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90"
              >
                <Plus className="h-6 w-6" />
              </Button>
