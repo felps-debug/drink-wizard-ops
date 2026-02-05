@@ -41,23 +41,23 @@
      <AppLayout title="Equipe">
        <div className="space-y-4 p-4">
          {/* Search */}
-         <div className="relative">
+        <div className="relative btn-gradient rounded-md">
            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
            <Input
              placeholder="Buscar membro..."
              value={search}
              onChange={(e) => setSearch(e.target.value)}
-             className="pl-9"
+            className="border-white/50 bg-transparent pl-9"
            />
          </div>
  
          {/* Team List */}
          <div className="space-y-3">
            {filteredUsers.map((user) => (
-             <Card key={user.id}>
+            <Card key={user.id} className="card-gradient border-0">
                <CardContent className="flex items-center gap-4 p-4">
-                 <Avatar className="h-12 w-12">
-                   <AvatarFallback className="bg-primary/10 text-primary">
+                <Avatar className="h-12 w-12 btn-gradient-dark">
+                  <AvatarFallback className="bg-transparent text-white">
                      {getInitials(user.name)}
                    </AvatarFallback>
                  </Avatar>
@@ -98,7 +98,7 @@
          {currentUser.role === "admin" && (
            <Button
              size="lg"
-             className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg"
+            className="btn-gradient-dark fixed bottom-24 right-4 h-14 w-14 rounded-full text-white shadow-lg"
            >
              <Plus className="h-6 w-6" />
            </Button>

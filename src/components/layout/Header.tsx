@@ -16,7 +16,7 @@
  
  export function Header({ title = "Mago dos Drinks" }: HeaderProps) {
    return (
-    <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-sm">
+    <header className="header-gradient sticky top-0 z-40 border-b backdrop-blur-sm">
        <div className="flex h-14 items-center justify-between px-4">
          <div className="flex items-center gap-3">
            <span className="text-xl">🍸</span>

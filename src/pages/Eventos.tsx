@@ -39,13 +39,13 @@
      <AppLayout title="Eventos">
        <div className="space-y-4 p-4">
          {/* Search */}
-         <div className="relative">
+        <div className="relative btn-gradient rounded-md">
            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
            <Input
              placeholder="Buscar evento..."
              value={search}
              onChange={(e) => setSearch(e.target.value)}
-             className="pl-9"
+            className="border-white/50 bg-transparent pl-9"
            />
          </div>
  
@@ -54,10 +54,10 @@
            {statusFilters.map((s) => (
              <Button
                key={s.value}
-               variant={filter === s.value ? "default" : "outline"}
+              variant={filter === s.value ? "default" : "ghost"}
                size="sm"
                onClick={() => setFilter(s.value)}
-               className="shrink-0"
+              className={filter === s.value ? "btn-gradient-dark shrink-0 text-white" : "btn-gradient shrink-0"}
              >
                {s.label}
              </Button>
@@ -68,7 +68,7 @@
          <div className="space-y-3">
            {filteredEvents.map((event) => (
              <Link key={event.id} to={`/eventos/${event.id}`}>
-               <Card className="transition-colors hover:bg-muted/50">
+              <Card className="card-gradient border-0 transition-all hover:shadow-md">
                  <CardContent className="p-4">
                    <div className="flex items-start justify-between gap-3">
                      <div className="min-w-0 flex-1 space-y-2">
@@ -117,7 +117,7 @@
            <Link to="/eventos/novo">
              <Button
                size="lg"
-               className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg"
+              className="btn-gradient-dark fixed bottom-24 right-4 h-14 w-14 rounded-full text-white shadow-lg"
              >
                <Plus className="h-6 w-6" />
              </Button>
