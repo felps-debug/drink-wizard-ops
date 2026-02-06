@@ -111,15 +111,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error fetching profile:", error);
       }
 
-      // 2. Map correctly
+      // 2. Map correctly - handle different schema versions
       const isOwner = email === 'xavier.davimot1@gmail.com';
-      const fetchedRole = profile?.role || 'bartender';
+      // Try multiple field names for compatibility: cargo (old), role (new), or first item in roles array
+      const fetchedRole = (profile as any)?.cargo || profile?.role || (profile as any)?.roles?.[0] || 'bartender';
       const finalRole = isOwner ? 'admin' : fetchedRole;
 
       console.log('🔐 Auth Debug:', {
         email,
         isOwner,
         profileRole: profile?.role,
+        profileCargo: (profile as any)?.cargo,
+        profileRoles: (profile as any)?.roles,
         fetchedRole,
         finalRole,
         profileData: profile
@@ -128,7 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser({
         id: userId,
         email: email,
-        name: profile?.full_name || email.split('@')[0],
+        name: (profile as any)?.nome || profile?.full_name || email.split('@')[0],
         role: finalRole,
         avatar_url: undefined,
       });

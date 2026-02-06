@@ -41,8 +41,8 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-white/20 bg-background/95 backdrop-blur-xl safe-area-bottom pb-1">
-      <div className="flex items-center justify-around py-2">
-        {filteredItems.slice(0, 5).map((item) => {
+      <div className="flex items-center justify-around py-2 overflow-x-auto">
+        {filteredItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
