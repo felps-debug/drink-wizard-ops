@@ -22,9 +22,20 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role as any)) {
+    console.log('🚫 Access Denied:', {
+      userRole: user.role,
+      allowedRoles,
+      userEmail: user.email
+    });
     // Optional: Redirect to a specific "Unauthorized" page or just Dashboard
     return <Navigate to="/" replace />;
   }
+
+  console.log('✅ Access Granted:', {
+    userRole: user.role,
+    allowedRoles,
+    userEmail: user.email
+  });
 
   return <Outlet />;
 };

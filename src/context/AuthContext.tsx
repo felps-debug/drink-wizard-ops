@@ -114,12 +114,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // 2. Map correctly
       const isOwner = email === 'xavier.davimot1@gmail.com';
       const fetchedRole = profile?.role || 'bartender';
+      const finalRole = isOwner ? 'admin' : fetchedRole;
+
+      console.log('🔐 Auth Debug:', {
+        email,
+        isOwner,
+        profileRole: profile?.role,
+        fetchedRole,
+        finalRole,
+        profileData: profile
+      });
 
       setUser({
         id: userId,
         email: email,
         name: profile?.full_name || email.split('@')[0],
-        role: isOwner ? 'admin' : fetchedRole,
+        role: finalRole,
         avatar_url: undefined,
       });
     } catch (err) {
