@@ -36,6 +36,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFetchingProfile, setIsFetchingProfile] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -90,16 +91,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const fetchProfile = async (userId: string, email: string) => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingProfile) {
+      console.log('⏭️ fetchProfile already running, skipping...');
+      return;
+    }
+
     console.log('🔍 fetchProfile START:', { userId, email });
+    setIsFetchingProfile(true);
 
     try {
-      // 1. Try to fetch profile from public.profiles
+      // 1. Try to fetch profile from public.profiles with timeout
       console.log('📡 Fetching profile from database...');
-      const { data: profile, error } = await supabase
+
+      const profileQuery = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+
+      // Add timeout to the query
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
+      );
+
+      const { data: profile, error } = await Promise.race([
+        profileQuery,
+        timeoutPromise
+      ]) as any;
 
       console.log('📦 Profile fetch result:', { hasData: !!profile, error: error?.message });
 
@@ -155,6 +174,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(fallbackUser);
       setLoading(false);
       console.log('✅ fetchProfile COMPLETE (fallback)');
+    } finally {
+      setIsFetchingProfile(false);
     }
   };
 
