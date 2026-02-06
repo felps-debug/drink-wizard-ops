@@ -38,55 +38,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Timeout wrapper to prevent infinite loading
-    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
-      return Promise.race([
-        promise,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error('Auth timeout')), ms)
-        )
-      ]);
-    };
-
     const checkUser = async () => {
       try {
-        const { data: { session } } = await withTimeout(
-          supabase.auth.getSession(),
-          5000 // 5 second timeout
-        );
+        // Supabase already handles session persistence automatically
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
-          await withTimeout(
-            fetchProfile(session.user.id, session.user.email!),
-            5000
-          );
+          // Fetch profile without timeout - let it complete
+          await fetchProfile(session.user.id, session.user.email!);
         } else {
           setUser(null);
           setLoading(false);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-        setUser(null);
-        setLoading(false); // Always exit loading on error
+        // Don't clear session on profile fetch error - keep user logged in
+        setLoading(false);
       }
     };
 
     checkUser();
 
-    // Listen for changes
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth event:", event);
-      if (session?.user) {
-        try {
-          // Wrapped in timeout to prevent hanging onAuthStateChange
-          await withTimeout(
-            fetchProfile(session.user.id, session.user.email!),
-            5000
-          );
-        } catch (e) {
-          console.error("fetchProfile in onAuthStateChange failed:", e);
-          setLoading(false);
-        }
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoading(false);
+      } else if (session?.user) {
+        // Fetch profile on sign in
+        await fetchProfile(session.user.id, session.user.email!);
       } else {
         setUser(null);
         setLoading(false);
@@ -128,6 +110,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         profileData: profile
       });
 
+      // Set user - this keeps session persistent
       setUser({
         id: userId,
         email: email,
@@ -135,9 +118,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         role: finalRole,
         avatar_url: undefined,
       });
+
+      setLoading(false);
     } catch (err) {
       console.error("Profile fetch error:", err);
-    } finally {
+
+      // Fallback: Keep user logged in with basic info from session
+      // This prevents logout on profile fetch errors
+      const isOwner = email === 'xavier.davimot1@gmail.com';
+      setUser({
+        id: userId,
+        email: email,
+        name: email.split('@')[0],
+        role: isOwner ? 'admin' : 'bartender',
+        avatar_url: undefined,
+      });
+
       setLoading(false);
     }
   };

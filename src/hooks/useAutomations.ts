@@ -48,9 +48,19 @@ export const useAutomations = () => {
         'id' | 'created_at' | 'updated_at' | 'trigger_count' | 'last_triggered_at' | 'created_by'
       >
     ) => {
+      // Get current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Insert with created_by
       const { data, error } = await supabase
         .from('automation_triggers')
-        .insert([newAuto])
+        .insert([{
+          ...newAuto,
+          created_by: user.id
+        }])
         .select()
         .single();
       if (error) throw error;
