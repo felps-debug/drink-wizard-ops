@@ -2,35 +2,54 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
-export interface Automation {
+export interface AutomationTrigger {
   id: string;
   name: string;
-  event_type: string;
-  action_type: string;
-  template_message: string;
+  description?: string;
   active: boolean;
+  trigger_event: string; // 'checklist_entrada', 'checklist_saida', 'event_created'
+  trigger_conditions?: Record<string, any>;
+  action_type: string; // 'whatsapp', 'email'
+  action_config: {
+    message: string;
+    phone_source?: string;
+    delay_seconds?: number;
+    max_retries?: number;
+  };
+  last_triggered_at?: string;
+  trigger_count?: number;
   created_at?: string;
+  updated_at?: string;
+  created_by?: string;
 }
 
 export const useAutomations = () => {
   const queryClient = useQueryClient();
 
-  const { data: automations = [], isLoading } = useQuery({
-    queryKey: ['magodosdrinks_triggers'],
+  // Fetch all automations from automation_triggers table
+  const { data: automations = [], isLoading, error } = useQuery({
+    queryKey: ['automation_triggers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('magodosdrinks_triggers')
+        .from('automation_triggers')
         .select('*')
-        .order('name');
+        .order('updated_at', { ascending: false });
       if (error) throw error;
-      return data as Automation[];
-    }
+      return data as AutomationTrigger[];
+    },
+    staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
+  // Create new automation
   const createAutomation = useMutation({
-    mutationFn: async (newAuto: Omit<Automation, 'id' | 'created_at'>) => {
+    mutationFn: async (
+      newAuto: Omit<
+        AutomationTrigger,
+        'id' | 'created_at' | 'updated_at' | 'trigger_count' | 'last_triggered_at' | 'created_by'
+      >
+    ) => {
       const { data, error } = await supabase
-        .from('magodosdrinks_triggers')
+        .from('automation_triggers')
         .insert([newAuto])
         .select()
         .single();
@@ -38,31 +57,71 @@ export const useAutomations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['magodosdrinks_triggers'] });
-      toast.success("AUTOMAÇÃO CRIADA!");
+      queryClient.invalidateQueries({ queryKey: ['automation_triggers'] });
+      toast.success('AUTOMAÇÃO CRIADA!');
     },
     onError: (err: any) => {
-      toast.error("ERRO AO CRIAR AUTOMAÇÃO: " + err.message);
+      toast.error(`ERRO: ${err.message}`);
     }
   });
 
-  const toggleAutomation = useMutation({
-    mutationFn: async ({ id, active }: { id: string, active: boolean }) => {
+  // Update automation
+  const updateAutomation = useMutation({
+    mutationFn: async (automation: AutomationTrigger) => {
       const { error } = await supabase
-        .from('magodosdrinks_triggers')
+        .from('automation_triggers')
+        .update(automation)
+        .eq('id', automation.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation_triggers'] });
+      toast.success('AUTOMAÇÃO ATUALIZADA!');
+    },
+    onError: (err: any) => {
+      toast.error(`ERRO: ${err.message}`);
+    }
+  });
+
+  // Toggle active status
+  const toggleAutomation = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const { error } = await supabase
+        .from('automation_triggers')
         .update({ active })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['magodosdrinks_triggers'] });
+      queryClient.invalidateQueries({ queryKey: ['automation_triggers'] });
+    }
+  });
+
+  // Delete automation
+  const deleteAutomation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('automation_triggers')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation_triggers'] });
+      toast.success('AUTOMAÇÃO DELETADA!');
+    },
+    onError: (err: any) => {
+      toast.error(`ERRO: ${err.message}`);
     }
   });
 
   return {
     automations,
     isLoading,
+    error,
     createAutomation,
-    toggleAutomation
+    updateAutomation,
+    toggleAutomation,
+    deleteAutomation
   };
 };
