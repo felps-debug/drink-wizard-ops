@@ -13,6 +13,8 @@ import { useEvents } from "@/hooks/useEvents";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { usePackages } from "@/hooks/usePackages";
 
 export default function NovoEvento() {
   const navigate = useNavigate();
@@ -26,6 +28,10 @@ export default function NovoEvento() {
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
   const [contractValue, setContractValue] = useState("");
+  const [packageId, setPackageId] = useState<string | undefined>(undefined);
+  const [observations, setObservations] = useState("");
+
+  const { packages, isLoading: loadingPackages } = usePackages();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +48,8 @@ export default function NovoEvento() {
         location,
         contractValue: Number(contractValue),
         status: "agendado", // Default status
+        package_id: packageId,
+        observations
       });
 
       toast.success("Evento agendado com sucesso!");
@@ -149,12 +157,29 @@ export default function NovoEvento() {
             </div>
           </section>
 
-          {/* Financials */}
+          {/* Financials & Extras */}
           <section className="space-y-4">
             <h2 className="font-display text-xl font-bold uppercase text-primary border-l-4 border-primary pl-3">
-              Financeiro
+              Pacote & Detalhes
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="package" className="font-mono text-xs uppercase">
+                  Pacote do Evento
+                </Label>
+                <Select value={packageId} onValueChange={setPackageId}>
+                  <SelectTrigger className="border-2 border-border bg-card font-bold uppercase focus:border-primary">
+                    <SelectValue placeholder="SELECIONE O PACOTE..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packages.map((pkg) => (
+                      <SelectItem key={pkg.id} value={pkg.id}>
+                        {pkg.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="value" className="font-mono text-xs uppercase">
                   Valor do Contrato (R$)
@@ -169,6 +194,18 @@ export default function NovoEvento() {
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
                   placeholder="0.00"
                   required
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="observations" className="font-mono text-xs uppercase">
+                  Observações Extras
+                </Label>
+                <Textarea
+                  id="observations"
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  className="border-2 border-border bg-card font-bold uppercase focus:border-primary min-h-[100px]"
+                  placeholder="EX: 300X COPO PERSONALIZADO, DETALHES DE MONTAGEM..."
                 />
               </div>
             </div>

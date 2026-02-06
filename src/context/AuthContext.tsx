@@ -7,7 +7,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string; // From metadata or profile
-  role: UserRole;
+  roles: string[];
   avatar_url?: string;
 }
 
@@ -24,11 +24,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signInWithGoogle: async () => {},
-  signInWithEmail: async () => {},
-  signUpWithEmail: async () => {},
-  resetPassword: async () => {},
-  signOut: async () => {},
+  signInWithGoogle: async () => { },
+  signInWithEmail: async () => { },
+  signUpWithEmail: async () => { },
+  resetPassword: async () => { },
+  signOut: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -38,20 +38,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session
+    // Timeout wrapper to prevent infinite loading
+    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth timeout')), ms)
+        )
+      ]);
+    };
+
     const checkUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const { data: { session } } = await withTimeout(
+          supabase.auth.getSession(),
+          5000 // 5 second timeout
+        );
+
         if (session?.user) {
-          await fetchProfile(session.user.id, session.user.email!);
+          await withTimeout(
+            fetchProfile(session.user.id, session.user.email!),
+            5000
+          );
         } else {
           setUser(null);
+          setLoading(false);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-      } finally {
-        setLoading(false);
+        setUser(null);
+        setLoading(false); // Always exit loading on error
       }
     };
 
@@ -59,8 +75,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth event:", event);
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email!);
+        try {
+          // Wrapped in timeout to prevent hanging onAuthStateChange
+          await withTimeout(
+            fetchProfile(session.user.id, session.user.email!),
+            5000
+          );
+        } catch (e) {
+          console.error("fetchProfile in onAuthStateChange failed:", e);
+          setLoading(false);
+        }
       } else {
         setUser(null);
         setLoading(false);
@@ -85,25 +111,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error fetching profile:", error);
       }
 
-      // 2. If profile exists, use it. If not (trigger might have failed or not fired yet), fallbacks.
-      if (profile) {
-        setUser({
-          id: userId,
-          email: email,
-          name: profile.full_name || email.split('@')[0],
-          role: profile.role || 'bartender',
-          avatar_url: profile.avatar_url,
-        });
-      } else {
-        // Fallback or "Pending" state if trigger hasn't run
-        // For now, default to 'bartender'
-        setUser({
-          id: userId,
-          email: email,
-          name: email.split('@')[0],
-          role: 'bartender', 
-        });
-      }
+      // 2. Map correctly
+      const isOwner = email === 'xavier.davimot1@gmail.com';
+      const fetchedRoles = profile?.roles || ['bartender'];
+
+      setUser({
+        id: userId,
+        email: email,
+        name: profile?.nome || email.split('@')[0],
+        roles: isOwner ? ['admin', 'chefe_bar', 'bartender', 'montador'] : fetchedRoles,
+        avatar_url: undefined,
+      });
     } catch (err) {
       console.error("Profile fetch error:", err);
     } finally {
@@ -122,11 +140,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+    } catch (err) {
+      setLoading(false); // Ensure loading is reset on error
+      throw err;
+    }
   };
 
   const signUpWithEmail = async (email: string, password: string, name: string) => {
@@ -155,14 +178,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      signInWithGoogle, 
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
       resetPassword,
-      signOut 
+      signOut
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,11 +1,12 @@
-import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useAuth } from "@/context/AuthContext";
-import { useAutomations } from "@/hooks/useAutomations";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { useAutomations } from "@/hooks/useAutomations";
+import { Zap, Plus, BellRing } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,189 +21,129 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Bot, MessageSquare, Zap, Trash2 } from "lucide-react";
-import { AutomationTrigger } from "@/types/automation";
+import { useState } from "react";
 
 export default function Automacoes() {
-  const { user } = useAuth();
-  const { automations, isLoading, addAutomation, toggleAutomation, deleteAutomation } = useAutomations();
+  const { automations, isLoading, createAutomation, toggleAutomation } = useAutomations();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // Form State
   const [name, setName] = useState("");
-  const [trigger, setTrigger] = useState<AutomationTrigger>("event_created");
-  const [message, setMessage] = useState("Olá {client_name}, seu evento em {date} está confirmado!");
+  const [eventType, setEventType] = useState("");
+  const [message, setMessage] = useState("");
 
-  const handleCreate = () => {
-    addAutomation.mutate({
+  const handleSubmit = async () => {
+    await createAutomation.mutateAsync({
       name,
-      trigger_event: trigger,
-      trigger_conditions: {}, // Future: Add condition builder
-      action_type: "whatsapp_message",
-      action_config: { message },
-      active: true,
+      event_type: eventType,
+      action_type: 'whatsapp',
+      template_message: message,
+      active: true
     });
     setIsDialogOpen(false);
     setName("");
+    setEventType("");
     setMessage("");
   };
 
-  if (!user || user.role !== "admin") {
-    return (
-      <AppLayout title="Automações">
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <p className="text-muted-foreground">Acesso restrito.</p>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout title="Automações">
-      <div className="space-y-6 p-6 md:p-8 animate-in fade-in zoom-in duration-500">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-4xl space-y-6 p-4">
+        <div className="flex items-center justify-between border-b-4 border-foreground pb-4">
           <div>
-            <h1 className="font-display text-3xl font-black uppercase tracking-tighter">
-              Automações & Bots
-            </h1>
-            <p className="text-muted-foreground font-mono text-sm uppercase">
-              Gerencie regras automáticas e disparos de mensagens
-            </p>
+            <h1 className="font-display text-4xl font-black uppercase tracking-tighter text-primary">Automações</h1>
+            <p className="font-mono text-xs uppercase text-muted-foreground">Logística & Notificações Inteligentes</p>
           </div>
-          
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-gradient shadow-lg shadow-primary/20">
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Regra
+              <Button className="rounded-none border-2 border-primary bg-primary font-bold uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none">
+                <Plus className="mr-2 h-4 w-4" /> Criar Gatilho
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] card-gradient border-white/10">
+            <DialogContent className="max-w-xl rounded-none border-2 border-white bg-zinc-950">
               <DialogHeader>
-                <DialogTitle>Mágica de Automação ✨</DialogTitle>
-                <CardDescription>Configure o gatilho e a ação desejada.</CardDescription>
+                <DialogTitle className="font-display text-2xl uppercase font-black">Nova Automação</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label>Nome da Regra</Label>
-                  <Input 
-                    placeholder="Ex: Boas vindas ao Cliente" 
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label className="font-mono text-xs uppercase">Nome da Regra</Label>
+                  <Input
+                    placeholder="EX: Agradecimento Pós-Checklist"
+                    className="rounded-none border-2 border-white/20 bg-black font-bold uppercase"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="bg-black/50 border-white/10"
+                    onChange={(e: any) => setName(e.target.value)}
                   />
                 </div>
-                
-                <div className="grid gap-2">
-                  <Label>Gatilho (Quando isso acontecer...)</Label>
-                  <Select value={trigger} onValueChange={(v) => setTrigger(v as AutomationTrigger)}>
-                    <SelectTrigger className="bg-black/50 border-white/10">
-                      <SelectValue />
+                <div className="space-y-2">
+                  <Label className="font-mono text-xs uppercase">Quando Disparar? (Gatilho)</Label>
+                  <Select value={eventType} onValueChange={setEventType}>
+                    <SelectTrigger className="rounded-none border-2 border-white/20 bg-black font-bold">
+                      <SelectValue placeholder="SELECIONE O EVENTO..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="event_created">Novo Evento Criado</SelectItem>
-                      <SelectItem value="status_changed">Status do Evento Mudou</SelectItem>
-                      {/* <SelectItem value="event_updated">Evento Atualizado</SelectItem> */}
+                      <SelectItem value="checklist_entrada_concluido">CHECKLIST ENTRADA CONCLUÍDO</SelectItem>
+                      <SelectItem value="checklist_saida_concluido">CHECKLIST SAÍDA CONCLUÍDO</SelectItem>
+                      <SelectItem value="evento_agendado">NOVO EVENTO AGENDADO</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="grid gap-2">
-                  <Label>Ação (Faça isso...)</Label>
-                  <div className="flex items-center gap-2 rounded-md border border-white/10 bg-black/50 p-3 text-sm text-muted-foreground">
-                    <Zap className="h-4 w-4 text-yellow-400" />
-                    Enviar WhatsApp via Z-API
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>Mensagem (Template)</Label>
-                  <Textarea 
+                <div className="space-y-2">
+                  <Label className="font-mono text-xs uppercase">Mensagem WhatsApp (Template)</Label>
+                  <Textarea
+                    placeholder="Olá {cliente}, seu checklist foi concluído!"
+                    className="rounded-none border-2 border-white/20 bg-black font-bold h-32"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Olá {client_name}..."
-                    className="min-h-[100px] bg-black/50 border-white/10 font-mono text-sm"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Variáveis: <code className="text-primary">{`{client_name}`}</code>, <code className="text-primary">{`{date}`}</code>, <code className="text-primary">{`{location}`}</code>
-                  </p>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase">Dica: use {`{cliente}, {data}, {local}`}</p>
                 </div>
+
+                <Button
+                  className="w-full h-12 mt-4 rounded-none border-2 border-white bg-white text-black font-black uppercase hover:bg-primary hover:text-white transition-all"
+                  onClick={handleSubmit}
+                  disabled={!name || !eventType || !message}
+                >
+                  Ativar Automação
+                </Button>
               </div>
-              <Button onClick={handleCreate} disabled={!name || !message} className="w-full btn-gradient">
-                Salvar Automação
-              </Button>
             </DialogContent>
           </Dialog>
         </div>
 
-        {/* Automations List */}
         <div className="grid gap-4">
-          {isLoading ? (
-            <p className="text-muted-foreground font-mono animate-pulse">Carregando robôs...</p>
-          ) : automations.length === 0 ? (
-             <Card className="border-dashed border-2 border-muted bg-transparent p-8 text-center">
-               <div className="flex justify-center mb-4">
-                 <Bot className="h-12 w-12 text-muted-foreground/50" />
-               </div>
-               <h3 className="text-lg font-medium">Nenhuma automação ativa</h3>
-               <p className="text-muted-foreground">Crie sua primeira regra para automatizar o atendimento.</p>
-             </Card>
-          ) : (
-            automations.map((auto) => (
-              <Card key={auto.id} className="card-gradient border-0 ring-1 ring-white/10 transition-all hover:ring-primary/50">
-                <CardContent className="flex items-center justify-between p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                      <Zap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg">{auto.name}</h3>
-                        <Badge variant="outline" className="text-xs font-mono uppercase">
-                          {auto.trigger_event.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                        <MessageSquare className="h-3 w-3" />
-                        <span className="line-clamp-1 max-w-[300px] md:max-w-[500px]">
-                          {auto.action_config.message}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+          {automations.map((auto) => (
+            <Card key={auto.id} className="rounded-none border-2 border-white/10 bg-black/40">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="font-display text-xl uppercase font-black">{auto.name}</CardTitle>
+                  <CardDescription className="font-mono text-[10px] uppercase text-primary font-bold">
+                    Gatilho: {auto.event_type.replace(/_/g, ' ')}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Switch
+                    checked={auto.active}
+                    onCheckedChange={(val) => toggleAutomation.mutate({ id: auto.id, active: val })}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-white/5 p-3 border border-white/5 rounded-none flex gap-3">
+                  <BellRing className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="font-mono text-xs text-muted-foreground italic leading-relaxed">
+                    "{auto.template_message}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
 
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`switch-${auto.id}`} className="text-xs text-muted-foreground uppercase">
-                        {auto.active ? 'Ativo' : 'Pausado'}
-                      </Label>
-                      <Switch 
-                        id={`switch-${auto.id}`}
-                        checked={auto.active}
-                        onCheckedChange={(checked) => toggleAutomation.mutate({ id: auto.id, active: checked })}
-                      />
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => {
-                        if (confirm("Tem certeza que deseja excluir esta automação?")) {
-                          deleteAutomation.mutate(auto.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+          {automations.length === 0 && !isLoading && (
+            <div className="py-20 text-center border-2 border-dashed border-white/10">
+              <Zap className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="font-mono text-sm uppercase text-muted-foreground">O sistema ainda não está operando no automático</p>
+            </div>
           )}
         </div>
-
       </div>
     </AppLayout>
   );

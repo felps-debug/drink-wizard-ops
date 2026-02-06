@@ -17,18 +17,17 @@ export const useEvents = () => {
 
       if (error) throw error;
 
-      // Map database fields to frontend types if necessary
-      // Assuming 1:1 mapping for simplicity based on the schema plan, 
-      // but might need adapting snake_case to camelCase if we strictly follow interfaces
       return data.map((event: any) => ({
         id: event.id,
         clientName: event.client_name,
-        clientPhone: event.client_phone || '', // Check DB schema compliance
+        clientPhone: event.client_phone || '',
         location: event.location,
         date: event.date,
-        contractValue: Number(event.financial_value), // Access controlled by RLS
+        contractValue: Number(event.contract_value || event.financial_value),
         status: event.status,
         createdAt: event.created_at,
+        package_id: event.package_id,
+        observations: event.observations,
       })) as Evento[];
     }
   });
@@ -55,7 +54,6 @@ export const useEvents = () => {
   // Add event
   const addEvent = useMutation({
     mutationFn: async (newEvent: Omit<Evento, 'id' | 'createdAt'>) => {
-      // Map frontend type to DB schema (snake_case)
       const { data, error } = await supabase
         .from('events')
         .insert([{
@@ -63,8 +61,10 @@ export const useEvents = () => {
           client_phone: newEvent.clientPhone,
           date: newEvent.date,
           location: newEvent.location,
-          financial_value: newEvent.contractValue,
-          status: newEvent.status
+          contract_value: newEvent.contractValue,
+          status: newEvent.status,
+          package_id: newEvent.package_id,
+          observations: newEvent.observations
         }])
         .select()
         .single();
@@ -91,8 +91,10 @@ export const useEvents = () => {
           client_phone: event.clientPhone,
           date: event.date,
           location: event.location,
-          financial_value: event.contractValue,
-          status: event.status
+          contract_value: event.contractValue,
+          status: event.status,
+          package_id: event.package_id,
+          observations: event.observations
         })
         .eq('id', event.id);
 
@@ -118,6 +120,8 @@ export const useEvents = () => {
 };
 
 export const useEvent = (id?: string) => {
+  const queryClient = useQueryClient();
+
   const { data: event, isLoading: isLoadingEvent } = useQuery({
     queryKey: ['events', id],
     queryFn: async () => {
@@ -136,14 +140,15 @@ export const useEvent = (id?: string) => {
         clientPhone: data.client_phone || '',
         location: data.location,
         date: data.date,
-        contractValue: Number(data.financial_value),
+        contractValue: Number(data.contract_value || data.financial_value),
         status: data.status,
         createdAt: data.created_at,
+        package_id: data.package_id,
+        observations: data.observations,
       } as Evento;
     },
     enabled: !!id
   });
-
 
   // Fetch checklists for this event
   const { data: checklists, isLoading: isLoadingChecklists } = useQuery({
@@ -151,7 +156,7 @@ export const useEvent = (id?: string) => {
     queryFn: async () => {
       if (!id) return [];
       const { data, error } = await supabase
-        .from('event_checklists') // Table name from schema
+        .from('checklists')
         .select('*')
         .eq('event_id', id);
 
@@ -160,22 +165,19 @@ export const useEvent = (id?: string) => {
       return data.map((item: any) => ({
         id: item.id,
         eventId: item.event_id,
-        type: item.type, // 'entrada' | 'saida'
-        items: item.items, // JSONB content
-        status: item.status || 'pendente', // Assuming status field exists or derived
+        type: item.type,
+        items: item.items,
+        status: item.status || 'pendente',
         checkedBy: item.checked_by
       }));
     },
     enabled: !!id
   });
 
-  const queryClient = useQueryClient();
-
   const saveChecklist = useMutation({
     mutationFn: async (data: { eventId: string; type: string; items: any[]; status: string }) => {
-      // Check if checklist exists
       const { data: existing } = await supabase
-        .from('event_checklists')
+        .from('checklists')
         .select('id')
         .eq('event_id', data.eventId)
         .eq('type', data.type)
@@ -183,7 +185,7 @@ export const useEvent = (id?: string) => {
 
       if (existing) {
         const { error } = await supabase
-          .from('event_checklists')
+          .from('checklists')
           .update({
             items: data.items,
             status: data.status,
@@ -193,7 +195,7 @@ export const useEvent = (id?: string) => {
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('event_checklists')
+          .from('checklists')
           .insert({
             event_id: data.eventId,
             type: data.type,

@@ -1,16 +1,11 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { toast } from "@/components/ui/use-toast";
-import {
-  eventos,
-  checklistItems,
-  ChecklistItem,
-  formatCurrency,
-} from "@/lib/mock-data";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { ChecklistItem, formatCurrency } from "@/lib/mock-data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,224 +16,157 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useEvent } from "@/hooks/useEvents";
 
 export default function ChecklistSaida() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const evento = eventos.find((e) => e.id === id);
-  const eventChecklist = checklistItems.filter((item) => item.eventId === id);
-
-  const [items, setItems] = useState<ChecklistItem[]>(
-    eventChecklist.map((item) => ({
-      ...item,
-      qtyReturned: item.qtyReturned ?? 0,
-    }))
-  );
+  const { event: evento, checklists, saveChecklist } = useEvent(id);
+  const [items, setItems] = useState<ChecklistItem[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
+
+  useEffect(() => {
+    if (checklists && checklists.length > 0) {
+      const saida = checklists.find(c => c.type === 'saida');
+      if (saida && saida.items) {
+        setItems(saida.items as ChecklistItem[]);
+      } else {
+        const entrada = checklists.find(c => c.type === 'entrada');
+        if (entrada && entrada.items) {
+          // Clone items from entry but reset returns
+          setItems((entrada.items as ChecklistItem[]).map(i => ({
+            ...i,
+            qtyReturned: 0,
+            id: Math.random().toString(36).substr(2, 9)
+          })));
+        }
+      }
+    }
+  }, [checklists]);
 
   if (!evento) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-muted-foreground">Evento não encontrado</p>
-          <Button variant="link" onClick={() => navigate("/eventos")} className="text-primary">
-            Voltar para eventos
-          </Button>
-        </div>
+        <p className="font-mono animate-pulse uppercase">Sincronizando Conferência...</p>
       </div>
     );
   }
 
-  const handleIncrement = (itemId: string) => {
+  const handleReturnChange = (itemId: string, delta: number) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== itemId) return item;
-        const maxReturn = item.qtyReceived ?? item.qtySent;
-        const newValue = Math.min((item.qtyReturned ?? 0) + 1, maxReturn);
+        const currentReturn = Number(item.qtyReturned) || 0;
+        const maxReturn = item.qtyReceived || item.qtySent;
+        const newValue = Math.max(0, Math.min(maxReturn, currentReturn + delta));
         return { ...item, qtyReturned: newValue };
       })
     );
   };
 
-  const handleDecrement = (itemId: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId && (item.qtyReturned ?? 0) > 0
-          ? { ...item, qtyReturned: (item.qtyReturned ?? 0) - 1 }
-          : item
-      )
-    );
+  const calculateConsumo = (item: ChecklistItem) => {
+    const received = item.qtyReceived || item.qtySent;
+    const returned = item.qtyReturned || 0;
+    return Math.max(0, received - returned);
   };
 
-  const getConsumo = (item: ChecklistItem) => {
-    const received = item.qtyReceived ?? item.qtySent;
-    const returned = item.qtyReturned ?? 0;
-    return received - returned;
+  const calculateCusto = (item: ChecklistItem) => {
+    return calculateConsumo(item) * (item.unitPrice || 0);
   };
 
-  const getCustoItem = (item: ChecklistItem) => {
-    return getConsumo(item) * item.unitPrice;
-  };
+  const totalCusto = items.reduce((acc, item) => acc + calculateCusto(item), 0);
 
-  const totalCusto = items.reduce((acc, item) => acc + getCustoItem(item), 0);
-
-  const handleShowSummary = () => {
-    setShowSummary(true);
-  };
-
-  const handleConfirmExit = () => {
-    setShowSummary(false);
-    setShowConfirmDialog(true);
-  };
-
-  const handleSubmit = () => {
-    // Aqui salvaria no banco/localStorage
-    toast({
-      title: "Evento finalizado!",
-      description: "O checklist de saída foi salvo e o evento foi encerrado.",
-    });
-    navigate(`/eventos/${id}`);
+  const handleSubmit = async () => {
+    if (!id) return;
+    try {
+      await saveChecklist.mutateAsync({
+        eventId: id,
+        type: 'saida',
+        items: items,
+        status: 'conferido'
+      });
+      navigate(`/eventos/${id}`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao salvar conferência final.");
+    }
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-14 items-center gap-3 px-4">
+    <div className="flex min-h-screen flex-col bg-background pb-32">
+      <header className="sticky top-0 z-50 border-b-2 border-primary/20 bg-background/95 backdrop-blur">
+        <div className="flex h-16 items-center gap-3 px-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(`/eventos/${id}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="truncate font-semibold">Checklist Saída</h1>
-            <p className="text-xs text-muted-foreground">{evento.clientName}</p>
+            <h1 className="truncate font-display text-lg uppercase font-bold">{evento.clientName}</h1>
+            <p className="text-[10px] font-mono uppercase text-muted-foreground">Checklist de Saída (Sobras)</p>
           </div>
         </div>
       </header>
 
-      {/* Items List */}
-      <div className="flex-1 space-y-3 p-4">
-        {items.map((item) => {
-          const consumo = getConsumo(item);
-          const custo = getCustoItem(item);
-          return (
-            <Card key={item.id} className="card-gradient border-0">
-              <CardContent className="space-y-3 p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium">{item.insumoName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Recebido: <span className="font-medium text-foreground">{item.qtyReceived ?? item.qtySent}</span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant="outline" className="border-primary text-primary">
-                      Consumo: {consumo}
-                    </Badge>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatCurrency(custo)}
-                    </p>
-                  </div>
+      <div className="flex-1 space-y-4 p-4">
+        {items.map((item) => (
+          <Card key={item.id} className="rounded-none border-2 border-white/10 bg-black/40">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-display font-bold uppercase">{item.insumoName}</h3>
+                  <p className="font-mono text-[10px] text-muted-foreground uppercase">
+                    Entrou: {item.qtyReceived || item.qtySent} | Consumo: {calculateConsumo(item)}
+                  </p>
                 </div>
+                <div className="text-right">
+                  <p className="font-display text-sm font-bold text-primary">{formatCurrency(calculateCusto(item))}</p>
+                </div>
+              </div>
 
-                {/* Controles +/- para retorno */}
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11"
-                    onClick={() => handleDecrement(item.id)}
-                  >
-                    <Minus className="h-5 w-5" />
-                  </Button>
-                  <div className="min-w-[60px] text-center">
-                    <span className="text-2xl font-bold">{item.qtyReturned ?? 0}</span>
-                    <p className="text-xs text-muted-foreground">Sobrou</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11"
-                    onClick={() => handleIncrement(item.id)}
-                  >
-                    <Plus className="h-5 w-5" />
-                  </Button>
+              <div className="flex items-center justify-center gap-6 p-2 bg-zinc-900/50">
+                <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2" onClick={() => handleReturnChange(item.id, -1)}>
+                  <Minus className="h-5 w-5" />
+                </Button>
+                <div className="text-center min-w-[80px]">
+                  <span className="text-3xl font-display font-black text-white">{item.qtyReturned ?? 0}</span>
+                  <p className="text-[10px] font-mono uppercase text-muted-foreground">Retornou</p>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2" onClick={() => handleReturnChange(item.id, 1)}>
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Footer with Total */}
-      <div className="sticky bottom-0 border-t border-border/40 bg-background p-4 space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Custo total estimado:</span>
-          <span className="text-lg font-bold text-primary">{formatCurrency(totalCusto)}</span>
+      {/* Footer Totalizer */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 border-t-2 border-white/10 bg-black/90 backdrop-blur-xl z-50">
+        <div className="flex items-center justify-between mb-4 px-2">
+          <span className="font-mono text-xs uppercase text-muted-foreground tracking-widest">Custo de Material Real:</span>
+          <span className="font-display text-xl font-bold text-success neon-text">{formatCurrency(totalCusto)}</span>
         </div>
         <Button
-          className="w-full min-h-[48px]"
-          onClick={handleShowSummary}
+          className="w-full h-14 font-display font-bold uppercase tracking-widest text-lg rounded-none border-2 border-white shadow-[4px_4px_0px_0px_white] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none bg-primary"
+          onClick={() => setShowConfirmDialog(true)}
+          disabled={saveChecklist.isPending}
         >
-          Salvar e Finalizar
+          <Save className="mr-2 h-5 w-5" />
+          {saveChecklist.isPending ? "FINALIZANDO..." : "ENCERRAR CONFERÊNCIA"}
         </Button>
       </div>
 
-      {/* Summary Dialog */}
-      <AlertDialog open={showSummary} onOpenChange={setShowSummary}>
-        <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Resumo de Encerramento</AlertDialogTitle>
-            <AlertDialogDescription>
-              Confira o consumo total antes de finalizar
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="space-y-2 py-4">
-            {items.map((item) => {
-              const consumo = getConsumo(item);
-              const custo = getCustoItem(item);
-              return (
-                <div key={item.id} className="flex items-center justify-between text-sm">
-                  <span>{item.insumoName}</span>
-                  <div className="text-right">
-                    <span className="font-medium">{consumo} un</span>
-                    <span className="ml-2 text-muted-foreground">{formatCurrency(custo)}</span>
-                  </div>
-                </div>
-              );
-            })}
-            <div className="border-t pt-2 mt-2">
-              <div className="flex items-center justify-between font-bold">
-                <span>Total</span>
-                <span className="text-primary">{formatCurrency(totalCusto)}</span>
-              </div>
-            </div>
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmExit}>Confirmar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* AC4: Final Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-none border-2 border-white bg-zinc-950">
           <AlertDialogHeader>
-            <AlertDialogTitle>Deseja encerrar o evento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá finalizar o evento "{evento.clientName}" e enviar os dados. 
-              Não será possível editar após a confirmação.
+            <AlertDialogTitle className="font-display uppercase text-2xl">Fechar Evento?</AlertDialogTitle>
+            <AlertDialogDescription className="font-mono text-xs uppercase">
+              Isso calculará o lucro final baseado nestas sobras. O consumo real de material foi de {formatCurrency(totalCusto)}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmit}>
-              Encerrar Evento
-            </AlertDialogAction>
+            <AlertDialogCancel className="rounded-none">Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmit} className="rounded-none bg-success font-bold uppercase">Encerrar com Sucesso</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

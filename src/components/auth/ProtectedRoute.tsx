@@ -21,7 +21,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !user.roles.some(role => allowedRoles.includes(role as any))) {
     // Optional: Redirect to a specific "Unauthorized" page or just Dashboard
     return <Navigate to="/" replace />;
   }

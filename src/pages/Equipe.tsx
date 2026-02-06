@@ -1,14 +1,14 @@
- import { AppLayout } from "@/components/layout/AppLayout";
- import { Card, CardContent } from "@/components/ui/card";
- import { Badge } from "@/components/ui/badge";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Avatar, AvatarFallback } from "@/components/ui/avatar";
- import { Plus, Search, Phone, Mail, Trash2, Check, Clock } from "lucide-react";
- import { useState } from "react";
- import { getRoleLabel, UserRole } from "@/lib/mock-data";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Plus, Search, Phone, Trash2, DollarSign, User } from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useTeam } from "@/hooks/useTeam";
+import { useStaff, StaffRole, getStaffRoleLabel } from "@/hooks/useStaff";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -25,216 +25,262 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
- 
- export default function Equipe() {
-  const { user } = useAuth();
-  const { members, invites, isLoading, inviteMember, revokeInvite } = useTeam();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  
-  // Invite Form State
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<UserRole>("bartender");
-  const [inviteLoading, setInviteLoading] = useState(false);
 
-  const handleInvite = async (e: React.FormEvent) => {
+export default function Equipe() {
+  const { user } = useAuth();
+  const { staff, isLoading, addStaff, removeStaff } = useStaff();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
+  // Form State
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formRoles, setFormRoles] = useState<StaffRole[]>(["bartender"]);
+  const [formDailyRate, setFormDailyRate] = useState("");
+  const [formLoading, setFormLoading] = useState(false);
+
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInviteLoading(true);
+    setFormLoading(true);
     try {
-      await inviteMember.mutateAsync({ email: inviteEmail, role: inviteRole });
-      setIsInviteOpen(false);
-      setInviteEmail("");
-      setInviteRole("bartender");
+      await addStaff.mutateAsync({
+        name: formName,
+        phone: formPhone,
+        role: formRoles[0], // Keep for backward compatibility if needed by SQL
+        roles: formRoles,
+        daily_rate: parseFloat(formDailyRate) || 0
+      });
+      setIsAddOpen(false);
+      setFormName("");
+      setFormPhone("");
+      setFormRoles(["bartender"]);
+      setFormDailyRate("");
     } catch (err) {
       console.error(err);
     } finally {
-      setInviteLoading(false);
+      setFormLoading(false);
     }
   };
 
-  const filteredMembers = members.filter(
-    (member) =>
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredStaff = staff.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.phone.includes(searchTerm)
   );
- 
 
- 
-   const getRoleBadgeVariant = (role: string) => {
-     switch (role) {
-       case "admin":
-         return "default";
-       case "chefe_bar":
-         return "secondary";
-       default:
-         return "outline";
-     }
-   };
- 
-   const getInitials = (name: string) => {
-     return name
-       .split(" ")
-       .map((n) => n[0])
-       .join("")
-       .toUpperCase()
-       .slice(0, 2);
-   };
- 
-   return (
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "chefe_bar":
+        return "default";
+      case "bartender":
+        return "secondary";
+      case "montador":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
 
-     <AppLayout title="Equipe">
-       <div className="space-y-6 p-4 md:p-8">
-         {/* Header */}
-         <div className="flex flex-col gap-4">
-            <h1 className="font-display text-3xl font-bold uppercase text-white">Equipe Tática</h1>
-            
-            {/* Search */}
-             <div className="relative">
-               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-               <Input
-                 placeholder="BUSCAR OPERADOR..."
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-                 className="pl-9 font-mono uppercase bg-zinc-900 border-white/20 focus:border-primary"
-               />
-             </div>
-         </div>
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
- 
-         {/* Invites Section (Only Admin) */}
-         {user?.role === 'admin' && invites.length > 0 && (
-           <div className="space-y-3">
-             <h2 className="font-display text-xl font-bold uppercase text-primary border-b-2 border-primary/20 pb-2">Convites Pendentes</h2>
-             {invites.map((invite) => (
-                <Card key={invite.id} className="rounded-none border-2 border-dashed border-white/20 bg-card/50">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                       <div className="flex h-10 w-10 items-center justify-center bg-muted">
-                          <Clock className="h-5 w-5 text-muted-foreground" />
-                       </div>
-                       <div>
-                         <p className="font-mono text-sm uppercase text-white">{invite.email}</p>
-                         <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">{getRoleLabel(invite.role)}</Badge>
-                            <span className="text-xs text-muted-foreground uppercase">Aguardando registro</span>
-                         </div>
-                       </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => revokeInvite.mutate(invite.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-             ))}
-           </div>
-         )}
+  const formatPhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    return phone;
+  };
 
-         {/* Active Team List */}
-         <div className="space-y-3">
-           <h2 className="font-display text-xl font-bold uppercase text-white border-b-2 border-white/10 pb-2">Membros Ativos</h2>
-           
-           {isLoading ? (
-              <div className="py-8 text-center text-muted-foreground font-mono animate-pulse">CARREGANDO DADOS...</div>
-           ) : filteredMembers.map((member) => (
+  const isAdmin = user?.roles?.includes('admin');
+
+  return (
+    <AppLayout title="Equipe">
+      <div className="space-y-6 p-4 md:p-8">
+        {/* Header */}
+        <div className="flex flex-col gap-4">
+          <h1 className="font-display text-3xl font-bold uppercase text-white">Equipe Tática</h1>
+          <p className="text-muted-foreground font-mono text-sm">Gerencie seus profissionais: Bartenders, Chefes de Bar e Montadores.</p>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+            <Input
+              placeholder="BUSCAR PROFISSIONAL..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 font-mono uppercase bg-zinc-900 border-white/20 focus:border-primary"
+            />
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {(['bartender', 'chefe_bar', 'montador'] as StaffRole[]).map((role) => (
+            <Card key={role} className="border-white/10 bg-black/40">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-primary">{staff.filter(s => (s.roles || [s.role]).includes(role)).length}</p>
+                <p className="text-xs font-mono uppercase text-muted-foreground">{getStaffRoleLabel(role)}s</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Staff List */}
+        <div className="space-y-3">
+          <h2 className="font-display text-xl font-bold uppercase text-white border-b-2 border-white/10 pb-2">Profissionais Cadastrados</h2>
+
+          {isLoading ? (
+            <div className="py-8 text-center text-muted-foreground font-mono animate-pulse">CARREGANDO DADOS...</div>
+          ) : filteredStaff.map((member) => (
             <Card key={member.id} className="group rounded-none border-2 border-white/10 bg-card transition-all hover:border-primary hover:bg-white/5">
-               <CardContent className="flex items-center gap-4 p-4">
+              <CardContent className="flex items-center gap-4 p-4">
                 <Avatar className="h-12 w-12 border-2 border-primary rounded-none">
                   <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                     {getInitials(member.name)}
-                   </AvatarFallback>
-                 </Avatar>
- 
-                 <div className="min-w-0 flex-1">
-                   <div className="flex items-center gap-2">
-                     <h3 className="truncate font-display text-lg font-bold uppercase text-white group-hover:text-primary transition-colors">{member.name}</h3>
-                     <Badge className={`rounded-none border px-2 py-0.5 font-mono text-[10px] uppercase font-bold`} variant={getRoleBadgeVariant(member.role)}>
-                       {getRoleLabel(member.role)}
-                     </Badge>
-                   </div>
- 
-                   <div className="mt-1 space-y-0.5 text-xs font-mono uppercase text-muted-foreground">
-                     {member.email && (
-                       <p className="flex items-center gap-1.5">
-                         <Mail className="h-3 w-3" />
-                         <span className="truncate">{member.email}</span>
-                       </p>
-                     )}
-                   </div>
-                 </div>
-               </CardContent>
-             </Card>
-           ))}
- 
-           {!isLoading && filteredMembers.length === 0 && (
-             <div className="py-12 text-center border-2 border-dashed border-white/10">
-               <p className="font-mono text-sm uppercase text-muted-foreground">Nenhum membro encontrado</p>
-             </div>
-           )}
-         </div>
- 
-         {/* FAB - Add Member with Dialog */}
-         {user && user.role === "admin" && (
-            <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-              <DialogTrigger asChild>
-               <Button
-                 size="lg"
+                    {getInitials(member.name)}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate font-display text-lg font-bold uppercase text-white group-hover:text-primary transition-colors">{member.name}</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {(member.roles || [member.role]).map((r: string) => (
+                        <Badge key={r} className={`rounded-none border px-2 py-0.5 font-mono text-[10px] uppercase font-bold`} variant={getRoleBadgeVariant(r)}>
+                          {getStaffRoleLabel(r as StaffRole)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-1 flex items-center gap-4 text-xs font-mono uppercase text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="h-3 w-3" />
+                      {formatPhone(member.phone)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-primary">
+                      <DollarSign className="h-3 w-3" />
+                      R$ {member.daily_rate?.toFixed(2) || '0.00'}/dia
+                    </span>
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => removeStaff.mutate(member.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {!isLoading && filteredStaff.length === 0 && (
+            <div className="py-12 text-center border-2 border-dashed border-white/10">
+              <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="font-mono text-sm uppercase text-muted-foreground">Nenhum profissional cadastrado</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Clique no + para adicionar</p>
+            </div>
+          )}
+        </div>
+
+        {/* FAB - Add Staff with Dialog */}
+        {isAdmin && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button
+                size="lg"
                 className="fixed bottom-24 right-4 h-16 w-16 rounded-none border-2 border-white bg-primary text-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:bg-primary hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]"
-               >
-                 <Plus className="h-8 w-8" />
-               </Button>
-              </DialogTrigger>
-              <DialogContent className="border-2 border-primary bg-zinc-950 sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="font-display text-2xl uppercase text-primary">Convidar Novo Agente</DialogTitle>
-                  <DialogDescription className="font-mono text-xs uppercase text-muted-foreground">
-                    O acesso será concedido automaticamente ao se registrar com este email.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleInvite} className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="uppercase font-bold">Email do Agente</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="email@exemplo.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      required
-                      className="rounded-none border-white/20 bg-black focus:border-primary"
-                    />
+              >
+                <Plus className="h-8 w-8" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="border-2 border-primary bg-zinc-950 sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-display text-2xl uppercase text-primary">Novo Profissional</DialogTitle>
+                <DialogDescription className="font-mono text-xs uppercase text-muted-foreground">
+                  Cadastre bartenders, chefes de bar ou montadores.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAdd} className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="uppercase font-bold">Nome Completo</Label>
+                  <Input
+                    id="name"
+                    placeholder="João Silva"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    required
+                    className="rounded-none border-white/20 bg-black focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="uppercase font-bold">Telefone (WhatsApp)</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="11999999999"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    required
+                    className="rounded-none border-white/20 bg-black focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="uppercase font-bold">Funções (Missões Aptas)</Label>
+                  <div className="grid grid-cols-2 gap-4 border-2 border-white/10 p-4 bg-black">
+                    {(['bartender', 'chefe_bar', 'montador'] as StaffRole[]).map((r) => (
+                      <div key={r} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`role-${r}`}
+                          checked={formRoles.includes(r)}
+                          onCheckedChange={(checked) => {
+                            if (checked) setFormRoles([...formRoles, r]);
+                            else setFormRoles(formRoles.filter(role => role !== r));
+                          }}
+                        />
+                        <Label htmlFor={`role-${r}`} className="font-mono text-xs uppercase cursor-pointer">
+                          {getStaffRoleLabel(r)}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role" className="uppercase font-bold">Função Tática</Label>
-                    <Select value={inviteRole} onValueChange={(val: UserRole) => setInviteRole(val)}>
-                      <SelectTrigger className="rounded-none border-white/20 bg-black focus:border-primary">
-                        <SelectValue placeholder="Selecione a função" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bartender">Bartender</SelectItem>
-                        <SelectItem value="chefe_bar">Chefe de Bar</SelectItem>
-                        <SelectItem value="admin">Admin / Operador</SelectItem>
-                        <SelectItem value="montador">Montador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setIsInviteOpen(false)} className="rounded-none uppercase font-bold">
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={inviteLoading} className="rounded-none bg-primary text-white uppercase font-bold hover:bg-primary/90">
-                      {inviteLoading ? "Enviando..." : "Enviar Convite"}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-         )}
-       </div>
-     </AppLayout>
-   );
- }
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rate" className="uppercase font-bold">Valor da Diária (R$)</Label>
+                  <Input
+                    id="rate"
+                    type="number"
+                    step="0.01"
+                    placeholder="150.00"
+                    value={formDailyRate}
+                    onChange={(e) => setFormDailyRate(e.target.value)}
+                    className="rounded-none border-white/20 bg-black focus:border-primary"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="rounded-none uppercase font-bold">
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={formLoading} className="rounded-none bg-primary text-white uppercase font-bold hover:bg-primary/90">
+                    {formLoading ? "Salvando..." : "Cadastrar"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    </AppLayout>
+  );
+}

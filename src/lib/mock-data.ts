@@ -16,6 +16,8 @@ export interface Insumo {
   category: string;
   unit: string;
   currentPrice: number;
+  minStock?: number;
+  currentStock?: number;
 }
 
 export interface Evento {
@@ -27,6 +29,8 @@ export interface Evento {
   contractValue: number;
   status: "agendado" | "montagem" | "em_curso" | "finalizado";
   createdAt: string;
+  package_id?: string;
+  observations?: string;
 }
 
 export interface ChecklistItem {

@@ -39,6 +39,8 @@ export function IngredientDialog({
   const [category, setCategory] = useState("");
   const [unit, setUnit] = useState("");
   const [minStock, setMinStock] = useState("");
+  const [currentStock, setCurrentStock] = useState("");
+  const [currentPrice, setCurrentPrice] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -47,13 +49,17 @@ export function IngredientDialog({
         setName(initialData.name);
         setCategory(initialData.category);
         setUnit(initialData.unit);
-        setMinStock(initialData.minStock.toString());
+        setMinStock((initialData.minStock ?? 0).toString());
+        setCurrentStock((initialData.currentStock ?? 0).toString());
+        setCurrentPrice((initialData.currentPrice ?? 0).toString());
       } else {
         // Reset form for new item
         setName("");
         setCategory("");
         setUnit("");
         setMinStock("");
+        setCurrentStock("");
+        setCurrentPrice("");
       }
     }
   }, [open, initialData]);
@@ -68,7 +74,8 @@ export function IngredientDialog({
         category,
         unit,
         minStock: Number(minStock) || 0,
-        currentPrice: 0 // Default for now
+        currentStock: Number(currentStock) || 0,
+        currentPrice: Number(currentPrice) || 0
       });
       onOpenChange(false);
     } catch (error) {
@@ -149,6 +156,33 @@ export function IngredientDialog({
               type="number"
               value={minStock}
               onChange={(e) => setMinStock(e.target.value)}
+              className="border-white/20 bg-black font-bold focus:border-primary"
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="currentStock" className="font-mono text-xs uppercase text-primary">
+              Estoque Atual
+            </Label>
+            <Input
+              id="currentStock"
+              type="number"
+              value={currentStock}
+              onChange={(e) => setCurrentStock(e.target.value)}
+              className="border-white/20 bg-black font-bold border-primary/50 focus:border-primary"
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="currentPrice" className="font-mono text-xs uppercase">
+              Preço de Custo (Atual)
+            </Label>
+            <Input
+              id="currentPrice"
+              type="number"
+              step="0.01"
+              value={currentPrice}
+              onChange={(e) => setCurrentPrice(e.target.value)}
               className="border-white/20 bg-black font-bold focus:border-primary"
               required
             />

@@ -15,6 +15,9 @@ import NovoEvento from "./pages/NovoEvento";
 import Login from "./pages/Login";
 import ChecklistEntrada from "./pages/ChecklistEntrada";
 import ChecklistSaida from "./pages/ChecklistSaida";
+import Profile from "./pages/Profile";
+import Escalas from "./pages/Escalas";
+import Pacotes from "./pages/Pacotes";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -37,28 +40,30 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
-              
-              {/* Public or General Protected Routes */}
+
+              {/* Protected Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/eventos" element={<Eventos />} />
                 <Route path="/eventos/:id" element={<EventoDetalhe />} />
                 <Route path="/eventos/:id/checklist-entrada" element={<ChecklistEntrada />} />
                 <Route path="/eventos/:id/checklist-saida" element={<ChecklistSaida />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/escalas" element={<Escalas />} />
               </Route>
 
 
               {/* Admin & Chefe de Bar Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin', 'chefe_bar']} />}>
-                 <Route path="/insumos" element={<Insumos />} />
-                 <Route path="/eventos/novo" element={<NovoEvento />} />
+                <Route path="/insumos" element={<Insumos />} />
+                <Route path="/eventos/novo" element={<NovoEvento />} />
               </Route>
 
-              {/* Admin Only Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/equipe" element={<Equipe />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/automacoes" element={<Automacoes />} />
+                <Route path="/pacotes" element={<Pacotes />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

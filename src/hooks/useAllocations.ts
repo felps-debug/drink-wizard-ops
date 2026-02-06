@@ -1,0 +1,176 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { whatsappService } from '@/services/whatsapp';
+
+export interface Allocation {
+    id: string;
+    event_id: string;
+    staff_id: string;
+    daily_rate: number;
+    status: 'reservado' | 'confirmado' | 'cancelado';
+    whatsapp_sent: boolean;
+    created_at: string;
+    // Joined data
+    staff?: {
+        id: string;
+        name: string;
+        phone: string;
+        role: string;
+    };
+}
+
+export function useAllocations(eventId?: string) {
+    const queryClient = useQueryClient();
+
+    // Fetch allocations for an event
+    const { data: allocations = [], isLoading } = useQuery({
+        queryKey: ['magodosdrinks_allocations', eventId],
+        enabled: !!eventId,
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('magodosdrinks_allocations')
+                .select(`
+          *,
+          staff:magodosdrinks_staff(id, name, phone, role)
+        `)
+                .eq('event_id', eventId)
+                .neq('status', 'cancelado');
+
+            if (error) throw error;
+            return data as Allocation[];
+        }
+    });
+
+    // Add staff to event and auto-notify
+    const allocateStaff = useMutation({
+        mutationFn: async ({ staffId, dailyRate }: { staffId: string; dailyRate: number }) => {
+            if (!eventId) throw new Error('Event ID required');
+
+            // 1. Insert allocation
+            const { data, error } = await supabase
+                .from('magodosdrinks_allocations')
+                .insert({
+                    event_id: eventId,
+                    staff_id: staffId,
+                    daily_rate: dailyRate,
+                    status: 'confirmado', // Set to confirmed immediately as per request
+                    whatsapp_sent: true
+                })
+                .select(`
+                    *,
+                    staff:magodosdrinks_staff(id, name, phone, role)
+                `)
+                .single();
+
+            if (error) throw error;
+
+            // 2. Auto-send WhatsApp to the hardcoded number
+            // User requested: "5585984658124" talking "Olá, voce foi escalado"
+            await whatsappService.sendMessage('5585984658124', 'Olá, voce foi escalado');
+
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['magodosdrinks_allocations', eventId] });
+            toast.success('Profissional alocado e notificado!');
+        },
+        onError: (err: any) => {
+            if (err.message.includes('duplicate')) {
+                toast.error('Profissional já está alocado para este evento');
+            } else {
+                toast.error('Erro ao alocar: ' + err.message);
+            }
+        }
+    });
+
+    // Confirm allocation and send WhatsApp
+    const confirmAndNotify = useMutation({
+        mutationFn: async ({
+            allocationId,
+            staffName,
+            staffPhone,
+            eventName,
+            eventDate,
+            eventLocation
+        }: {
+            allocationId: string;
+            staffName: string;
+            staffPhone: string;
+            eventName: string;
+            eventDate: string;
+            eventLocation: string;
+        }) => {
+            // 1. Fetch template from referencial
+            const { data: refData } = await supabase
+                .from('magodosdrinks_referencial')
+                .select('valor')
+                .eq('categoria', 'mensagem')
+                .eq('chave', 'convite')
+                .single();
+
+            const template = refData?.valor || 'Opa, você foi escolhido {nome}! 🎉';
+
+            // 2. Prepare message
+            const message = template
+                .replace('{nome}', staffName)
+                .replace('{cliente}', eventName)
+                .replace('{data}', eventDate)
+                .replace('{local}', eventLocation);
+
+            // 3. Send WhatsApp
+            const result = await whatsappService.sendMessage(staffPhone, message);
+
+            if (result.status === 'error') {
+                throw new Error(result.error || 'Falha ao enviar WhatsApp');
+            }
+
+            // 4. Update status in DB
+            const { error } = await supabase
+                .from('magodosdrinks_allocations')
+                .update({
+                    status: 'confirmado',
+                    whatsapp_sent: true
+                })
+                .eq('id', allocationId);
+
+            if (error) throw error;
+
+            return result;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['magodosdrinks_allocations', eventId] });
+            toast.success('Confirmado e WhatsApp enviado! 📱');
+        },
+        onError: (err: any) => {
+            toast.error('Erro: ' + err.message);
+        }
+    });
+
+    // Remove allocation
+    const removeAllocation = useMutation({
+        mutationFn: async (allocationId: string) => {
+            const { error } = await supabase
+                .from('magodosdrinks_allocations')
+                .update({ status: 'cancelado' })
+                .eq('id', allocationId);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['magodosdrinks_allocations', eventId] });
+            toast.success('Alocação removida!');
+        },
+        onError: (err: any) => {
+            toast.error('Erro ao remover: ' + err.message);
+        }
+    });
+
+    return {
+        allocations,
+        isLoading,
+        allocateStaff,
+        confirmAndNotify,
+        removeAllocation
+    };
+}

@@ -1,8 +1,9 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Phone, Calendar, DollarSign, CheckCircle2, Clock, Package, PackageCheck } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Calendar, DollarSign, CheckCircle2, Clock, Package, PackageCheck, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import {
   formatCurrency,
   formatDate,
@@ -11,12 +12,14 @@ import {
 } from "@/lib/mock-data";
 import { useAuth } from "@/context/AuthContext";
 import { useEvent } from "@/hooks/useEvents";
+import { OperationalCosts } from "@/components/events/OperationalCosts";
+import { EventAssignments } from "@/components/events/EventAssignments";
 
 export default function EventoDetalhe() {
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const { event: evento, checklists, isLoading } = useEvent(id);
 
   // Derive status from checklists (if using JSONB items structure, logic adapts)
@@ -48,7 +51,7 @@ export default function EventoDetalhe() {
     );
   }
 
-  const canEdit = user && (user.role === "admin" || user.role === "chefe_bar");
+  const canEdit = user?.roles?.some(r => ['admin', 'chefe_bar'].includes(r));
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -61,9 +64,23 @@ export default function EventoDetalhe() {
           <div className="flex-1">
             <h1 className="truncate font-semibold">{evento.clientName}</h1>
           </div>
-          <Badge className={getStatusColor(evento.status)}>
-            {getStatusLabel(evento.status)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="hidden md:flex gap-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
+              onClick={() => {
+                // FR4: WhatsApp Trigger
+                toast.success("Enviando mensagem via Evolution API...");
+              }}
+            >
+              <MessageCircle className="h-4 w-4" />
+              Notificar Cliente
+            </Button>
+            <Badge className={getStatusColor(evento.status)}>
+              {getStatusLabel(evento.status)}
+            </Badge>
+          </div>
         </div>
       </header>
 
@@ -84,7 +101,7 @@ export default function EventoDetalhe() {
                 <Calendar className="h-4 w-4 text-primary" />
                 <span>{formatDate(evento.date)}</span>
               </div>
-              {user && user.role === "admin" && (
+              {user?.roles?.includes('admin') && (
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
                   <DollarSign className="h-4 w-4" />
                   <span>{formatCurrency(evento.contractValue)}</span>
@@ -103,9 +120,9 @@ export default function EventoDetalhe() {
             <div className="py-8 text-center text-muted-foreground border-2 border-dashed border-white/10 rounded-lg">
               <p>Nenhum checklist iniciado.</p>
               {canEdit && (
-                 <Button variant="link" className="text-primary mt-2">
-                   Iniciar Checklist de Entrada
-                 </Button>
+                <Button variant="link" className="text-primary mt-2">
+                  Iniciar Checklist de Entrada
+                </Button>
               )}
             </div>
           )}
@@ -147,7 +164,7 @@ export default function EventoDetalhe() {
               </Link>
 
               {/* Botão Checklist Saída - AC1: Bloqueado até entrada concluída */}
-              <Link 
+              <Link
                 to={entryComplete ? `/eventos/${id}/checklist-saida` : "#"}
                 onClick={(e) => !entryComplete && e.preventDefault()}
               >
@@ -185,6 +202,20 @@ export default function EventoDetalhe() {
             </div>
           ) : null}
         </div>
+
+        {/* Operational Costs Section (Admin only) */}
+        {/* Operational Costs & Staff Section (Admin only) */}
+        {user?.roles?.includes('admin') && (
+          <div className="space-y-8 pt-4 border-t border-white/10">
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Escala e Custos Operacionais</h2>
+              <div className="grid gap-6 md:grid-cols-2">
+                <EventAssignments eventId={id!} eventName={evento.clientName || 'Evento'} eventDate={formatDate(evento.date)} />
+                <OperationalCosts eventId={id!} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

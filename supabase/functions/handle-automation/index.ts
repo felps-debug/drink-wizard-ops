@@ -42,7 +42,7 @@ serve(async (req) => {
         const messageTemplate = automation.action_config.message;
 
         // Simple variable substitution
-        let message = messageTemplate
+        const message = messageTemplate
           .replace("{client_name}", record.client_name || "")
           .replace("{date}", new Date(record.date).toLocaleDateString("pt-BR") || "")
           .replace("{location}", record.location || "");

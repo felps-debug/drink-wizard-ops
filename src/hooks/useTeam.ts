@@ -6,7 +6,7 @@ import { toast } from "sonner";
 export interface TeamMember {
   id: string;
   name: string;
-  email?: string; // profile table might not strictly replicate auth email, but we often store it if needed
+  email?: string;
   role: UserRole;
   avatarUrl?: string;
 }
@@ -25,22 +25,17 @@ export const useTeam = () => {
   const { data: members, isLoading: loadingMembers } = useQuery({
     queryKey: ['team_members'],
     queryFn: async () => {
-      // Note: "profiles" usually doesn't store email by default in some setups 
-      // unless we synced it from auth.users.
-      // Assuming our trigger or signup flow adds 'full_name' and maybe we can't get email directly 
-      // from profiles easily without a joined view or if we saved it in metadata.
-      // For now, let's fetch what we have in profiles.
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('full_name');
+        .order('nome');
 
       if (error) throw error;
 
       return data.map((p: any) => ({
         id: p.id,
-        name: p.full_name || 'Sem nome',
-        role: p.role,
+        name: p.nome || 'Sem nome',
+        role: p.cargo || 'bartender',
         avatarUrl: p.avatar_url
       })) as TeamMember[];
     }
@@ -60,7 +55,7 @@ export const useTeam = () => {
       return data.map((i: any) => ({
         id: i.id,
         email: i.email,
-        role: i.role,
+        role: i.cargo || i.role,
         createdAt: i.created_at
       })) as TeamInvite[];
     }
@@ -68,12 +63,15 @@ export const useTeam = () => {
 
   // 3. Invite Member Action
   const inviteMember = useMutation({
-    mutationFn: async ({ email, role }: { email: string, role: UserRole }) => {
-      const { error } = await supabase
-        .from('team_invites')
-        .insert({ email, role });
+    mutationFn: async ({ email, role, name }: { email: string, role: UserRole, name: string }) => {
+      const { data, error } = await supabase.functions.invoke('invite-agent', {
+        body: { email, role, full_name: name }
+      });
 
       if (error) throw error;
+
+      // Also record in team_invites for visibility in the list
+      await supabase.from('team_invites').insert({ email, role: role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team_invites'] });

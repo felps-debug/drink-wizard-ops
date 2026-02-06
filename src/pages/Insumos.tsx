@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { insumos as mockInsumos, formatCurrency, Insumo } from "@/lib/mock-data";
 import { useAuth } from "@/context/AuthContext";
@@ -15,7 +16,7 @@ export default function Insumos() {
   const { insumos, isLoading, addInsumo, updateInsumo } = useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  
+
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedInsumo, setSelectedInsumo] = useState<Insumo | undefined>(undefined);
@@ -94,11 +95,10 @@ export default function Insumos() {
               variant={categoryFilter === cat ? "default" : "outline"}
               size="sm"
               onClick={() => setCategoryFilter(cat)}
-               className={`shrink-0 border-2 font-bold uppercase tracking-wider ${
-                categoryFilter === cat 
-                  ? "bg-primary text-white border-primary" 
-                  : "bg-transparent text-muted-foreground border-white/20 hover:border-primary hover:text-white"
-              }`}
+              className={`shrink-0 border-2 font-bold uppercase tracking-wider ${categoryFilter === cat
+                ? "bg-primary text-white border-primary"
+                : "bg-transparent text-muted-foreground border-white/20 hover:border-primary hover:text-white"
+                }`}
             >
               {cat === "all" ? "Todos" : cat}
             </Button>
@@ -112,8 +112,8 @@ export default function Insumos() {
               <h3 className="mb-4 font-display text-xl font-bold uppercase text-primary border-b-2 border-primary/20 pb-2">{category}</h3>
               <div className="grid gap-3">
                 {items.map((insumo) => (
-                  <Card 
-                    key={insumo.id} 
+                  <Card
+                    key={insumo.id}
                     className="group rounded-none border-2 border-white/10 bg-card transition-all hover:border-white hover:bg-white/5 cursor-pointer"
                     onClick={() => user?.role === 'admin' && handleEditClick(insumo)}
                   >
@@ -123,13 +123,24 @@ export default function Insumos() {
                         <p className="font-mono text-xs uppercase text-muted-foreground tracking-wide">Unidade: {insumo.unit}</p>
                       </div>
                       <div className="flex items-center gap-4">
-                         {user && user.role === "admin" && (
+                        {user && user.role === "admin" && (
                           <Edit className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                         )}
-                         {user && user.role === "admin" && (
-                          <Badge className="rounded-none border-2 border-primary bg-primary/10 px-3 py-1 font-mono text-sm font-bold text-primary">
-                            {formatCurrency(insumo.currentPrice)}
-                          </Badge>
+                        )}
+                        {user && user.role === "admin" && (
+                          <div className="text-right">
+                            <Badge className="rounded-none border-2 border-primary bg-primary/10 px-3 py-1 font-mono text-sm font-bold text-primary block mb-1">
+                              {formatCurrency(insumo.currentPrice)}
+                            </Badge>
+                            {insumo.currentStock !== undefined && (
+                              <p className={cn(
+                                "font-mono text-[10px] uppercase font-bold",
+                                insumo.currentStock <= (insumo.minStock || 0) ? "text-destructive" : "text-success"
+                              )}>
+                                Estoque: {insumo.currentStock} {insumo.unit}
+                                {insumo.currentStock <= (insumo.minStock || 0) && " ⚠️"}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </CardContent>
@@ -158,7 +169,7 @@ export default function Insumos() {
         )}
 
         {/* Edit/Create Dialog */}
-        <IngredientDialog 
+        <IngredientDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           onSubmit={handleFormSubmit}
