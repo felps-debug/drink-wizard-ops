@@ -7,7 +7,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string; // From metadata or profile
-  roles: string[];
+  role: string;
   avatar_url?: string;
 }
 
@@ -113,13 +113,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // 2. Map correctly
       const isOwner = email === 'xavier.davimot1@gmail.com';
-      const fetchedRoles = profile?.roles || ['bartender'];
+      const fetchedRole = profile?.role || 'bartender';
 
       setUser({
         id: userId,
         email: email,
-        name: profile?.nome || email.split('@')[0],
-        roles: isOwner ? ['admin', 'chefe_bar', 'bartender', 'montador'] : fetchedRoles,
+        name: profile?.full_name || email.split('@')[0],
+        role: isOwner ? 'admin' : fetchedRole,
         avatar_url: undefined,
       });
     } catch (err) {

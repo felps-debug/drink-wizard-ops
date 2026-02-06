@@ -1,4 +1,4 @@
-import { Home, Calendar, Package, Users, BarChart3, Zap, Map, User, LucideIcon } from "lucide-react";
+import { Home, Calendar, Package, Users, BarChart3, Zap, Map, User, Box, LucideIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -14,8 +14,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, name: "Início", path: "/", roles: ["*"] },
   { icon: Calendar, name: "Eventos", path: "/eventos", roles: ["*"] },
+  { icon: Box, name: "Insumos", path: "/insumos", roles: ["admin", "chefe_bar"] },
   { icon: Users, name: "Equipe", path: "/equipe", roles: ["admin", "chefe_bar"] },
   { icon: Package, name: "Pacotes", path: "/pacotes", roles: ["admin"] },
+  { icon: Zap, name: "Automações", path: "/automacoes", roles: ["admin"] },
   { icon: Map, name: "Escalas", path: "/escalas", roles: ["*"] },
   {
     icon: BarChart3,
@@ -32,7 +34,7 @@ export function BottomNav() {
 
   const filteredItems = navItems.filter(item => {
     if (item.roles.includes("*")) return true;
-    return user && user.roles.some(role => item.roles.includes(role as any));
+    return user && item.roles.includes(user.role as any);
   });
 
   if (!user) return null;
