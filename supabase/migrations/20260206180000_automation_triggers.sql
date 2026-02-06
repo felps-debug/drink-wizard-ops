@@ -35,28 +35,28 @@ create policy "admins_read" on public.automation_triggers
   for select to authenticated
   using (
     (auth.jwt() ->> 'role'::text) = 'admin'::text OR
-    (select roles from public.profiles where id = auth.uid()) = 'admin'::user_role
+    'admin'::user_role = ANY((select roles from public.profiles where id = auth.uid()))
   );
 
 create policy "admins_insert" on public.automation_triggers
   for insert to authenticated
   with check (
     (auth.jwt() ->> 'role'::text) = 'admin'::text OR
-    (select roles from public.profiles where id = auth.uid()) = 'admin'::user_role
+    'admin'::user_role = ANY((select roles from public.profiles where id = auth.uid()))
   );
 
 create policy "admins_update" on public.automation_triggers
   for update to authenticated
   using (
     (auth.jwt() ->> 'role'::text) = 'admin'::text OR
-    (select roles from public.profiles where id = auth.uid()) = 'admin'::user_role
+    'admin'::user_role = ANY((select roles from public.profiles where id = auth.uid()))
   );
 
 create policy "admins_delete" on public.automation_triggers
   for delete to authenticated
   using (
     (auth.jwt() ->> 'role'::text) = 'admin'::text OR
-    (select roles from public.profiles where id = auth.uid()) = 'admin'::user_role
+    'admin'::user_role = ANY((select roles from public.profiles where id = auth.uid()))
   );
 
 -- Indexes for performance
