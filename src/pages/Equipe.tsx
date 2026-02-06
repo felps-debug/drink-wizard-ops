@@ -98,7 +98,7 @@ export default function Equipe() {
     return phone;
   };
 
-  const isAdmin = user?.roles?.includes('admin');
+  const isAdmin = user?.role === 'admin';
 
   return (
     <AppLayout title="Equipe">

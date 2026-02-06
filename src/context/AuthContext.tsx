@@ -62,23 +62,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 Auth event:", event, "Session:", !!session);
-
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
       } else if (event === 'SIGNED_IN' && session?.user) {
-        console.log("📥 Fetching profile for user:", session.user.email);
         try {
           await fetchProfile(session.user.id, session.user.email!);
-          console.log("✅ Profile fetch completed");
         } catch (error) {
-          console.error("❌ Profile fetch failed:", error);
+          console.error("Profile fetch failed:", error);
           setLoading(false);
         }
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         // Silent refresh, don't fetch profile again
-        console.log("🔄 Token refreshed");
       } else {
         setUser(null);
         setLoading(false);
@@ -93,17 +88,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchProfile = async (userId: string, email: string) => {
     // Prevent multiple simultaneous fetches
     if (isFetchingProfile) {
-      console.log('⏭️ fetchProfile already running, skipping...');
       return;
     }
 
-    console.log('🔍 fetchProfile START:', { userId, email });
     setIsFetchingProfile(true);
 
     try {
       // 1. Try to fetch profile from public.profiles with timeout
-      console.log('📡 Fetching profile from database...');
-
       const profileQuery = supabase
         .from('profiles')
         .select('*')
@@ -120,10 +111,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         timeoutPromise
       ]) as any;
 
-      console.log('📦 Profile fetch result:', { hasData: !!profile, error: error?.message });
-
       if (error && error.code !== 'PGRST116') {
-        console.error("⚠️ Error fetching profile:", error);
+        console.error("Error fetching profile:", error);
       }
 
       // 2. Map correctly - handle different schema versions
@@ -132,48 +121,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const fetchedRole = (profile as any)?.cargo || profile?.role || (profile as any)?.roles?.[0] || 'bartender';
       const finalRole = isOwner ? 'admin' : fetchedRole;
 
-      console.log('🔐 Auth Debug:', {
-        email,
-        isOwner,
-        profileRole: profile?.role,
-        profileCargo: (profile as any)?.cargo,
-        profileRoles: (profile as any)?.roles,
-        fetchedRole,
-        finalRole,
-        profileData: profile
-      });
-
       // Set user - this keeps session persistent
-      const userData = {
+      setUser({
         id: userId,
         email: email,
         name: (profile as any)?.nome || profile?.full_name || email.split('@')[0],
         role: finalRole,
         avatar_url: undefined,
-      };
+      });
 
-      console.log('👤 Setting user:', userData);
-      setUser(userData);
       setLoading(false);
-      console.log('✅ fetchProfile COMPLETE');
     } catch (err) {
-      console.error("❌ Profile fetch error:", err);
+      console.error("Profile fetch error:", err);
 
       // Fallback: Keep user logged in with basic info from session
-      // This prevents logout on profile fetch errors
       const isOwner = email === 'xavier.davimot1@gmail.com';
-      const fallbackUser = {
+      setUser({
         id: userId,
         email: email,
         name: email.split('@')[0],
         role: isOwner ? 'admin' : 'bartender',
         avatar_url: undefined,
-      };
+      });
 
-      console.log('🔄 Using fallback user:', fallbackUser);
-      setUser(fallbackUser);
       setLoading(false);
-      console.log('✅ fetchProfile COMPLETE (fallback)');
     } finally {
       setIsFetchingProfile(false);
     }
@@ -190,22 +161,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    console.log('🔑 signInWithEmail START');
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      console.log('🔑 signInWithPassword completed', error ? `Error: ${error.message}` : 'Success');
       if (error) throw error;
 
       // Wait a bit for onAuthStateChange to process
-      console.log('⏳ Waiting for auth state to settle...');
       await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('✅ signInWithEmail COMPLETE');
     } catch (err) {
-      console.error('❌ signInWithEmail ERROR:', err);
-      setLoading(false); // Ensure loading is reset on error
+      setLoading(false);
       throw err;
     }
   };

@@ -121,7 +121,7 @@ export default function Eventos() {
 
                   <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
                     <p className="font-mono text-sm font-bold text-white uppercase">{formatDate(event.date)}</p>
-                    {user?.roles?.includes('admin') && (
+                    {user?.role === 'admin' && (
                       <p className="font-display text-lg font-bold text-primary neon-text">
                         {formatCurrency(event.contractValue)}
                       </p>
@@ -140,7 +140,7 @@ export default function Eventos() {
         </div>
 
         {/* FAB - New Event */}
-        {user?.roles?.some(r => ['admin', 'chefe_bar'].includes(r)) && (
+        {user && ['admin', 'chefe_bar'].includes(user.role) && (
           <Link to="/eventos/novo">
             <Button
               size="lg"

@@ -51,7 +51,7 @@ export default function EventoDetalhe() {
     );
   }
 
-  const canEdit = user?.roles?.some(r => ['admin', 'chefe_bar'].includes(r));
+  const canEdit = user && ['admin', 'chefe_bar'].includes(user.role);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -101,7 +101,7 @@ export default function EventoDetalhe() {
                 <Calendar className="h-4 w-4 text-primary" />
                 <span>{formatDate(evento.date)}</span>
               </div>
-              {user?.roles?.includes('admin') && (
+              {user?.role === 'admin' && (
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
                   <DollarSign className="h-4 w-4" />
                   <span>{formatCurrency(evento.contractValue)}</span>
@@ -205,7 +205,7 @@ export default function EventoDetalhe() {
 
         {/* Operational Costs Section (Admin only) */}
         {/* Operational Costs & Staff Section (Admin only) */}
-        {user?.roles?.includes('admin') && (
+        {user?.role === 'admin' && (
           <div className="space-y-8 pt-4 border-t border-white/10">
             <div>
               <h2 className="text-lg font-semibold mb-4">Escala e Custos Operacionais</h2>
