@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const UAZAPI_INSTANCE = Deno.env.get("UAZAPI_INSTANCE");
+const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://nexus-ultra.uazapi.com";
 const UAZAPI_TOKEN = Deno.env.get("UAZAPI_TOKEN");
 
 interface WhatsAppRequest {
@@ -42,8 +42,22 @@ function validatePhone(phone: string): { valid: boolean; cleaned: string } {
 
 /**
  * Send WhatsApp message via UAZapi
+ * Note: This function is designed to be called internally by handle-automation
+ * It does not require JWT authentication
  */
 serve(async (req) => {
+  // Allow CORS for internal calls
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
+    });
+  }
+
   if (req.method !== "POST") {
     return new Response("Method not allowed", {
       status: 405,
@@ -107,12 +121,12 @@ serve(async (req) => {
     }
 
     // Verify environment variables are set
-    if (!UAZAPI_INSTANCE || !UAZAPI_TOKEN) {
-      console.error("[WhatsApp] Missing UAZAPI credentials");
+    if (!UAZAPI_TOKEN) {
+      console.error("[WhatsApp] Missing UAZAPI_TOKEN");
       return new Response(
         JSON.stringify({
           status: "error",
-          message: "WhatsApp service not properly configured",
+          message: "WhatsApp service not properly configured - missing token",
           timestamp: new Date().toISOString()
         }),
         { status: 500, headers: { "Content-Type": "application/json" } }
@@ -120,16 +134,20 @@ serve(async (req) => {
     }
 
     console.log(`[WhatsApp] Sending to ${cleaned}: ${message.substring(0, 50)}...`);
+    console.log(`[WhatsApp] Using UAZapi URL: ${UAZAPI_URL}`);
 
-    // Call UAZapi Z-API endpoint
+    // Call UAZapi endpoint
     const uazapiResponse = await fetch(
-      `https://api.z-api.io/instances/${UAZAPI_INSTANCE}/token/${UAZAPI_TOKEN}/send-text`,
+      `${UAZAPI_URL}/send/text`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "token": UAZAPI_TOKEN
+        },
         body: JSON.stringify({
-          phone: cleaned,
-          message: message
+          number: cleaned,
+          text: message
         })
       }
     );
