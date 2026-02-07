@@ -31,7 +31,14 @@ export default function NovoEvento() {
   const [packageId, setPackageId] = useState<string | undefined>(undefined);
   const [observations, setObservations] = useState("");
 
-  const { packages, isLoading: loadingPackages } = usePackages();
+  const { packages = [], isLoading: loadingPackages } = usePackages();
+
+  // Debug log for packages
+  console.log('NovoEvento - Packages:', {
+    count: packages?.length || 0,
+    loading: loadingPackages,
+    hasPackages: Array.isArray(packages) && packages.length > 0
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,18 +172,24 @@ export default function NovoEvento() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="package" className="font-mono text-xs uppercase">
-                  Pacote do Evento
+                  Pacote do Evento {loadingPackages && "(Carregando...)"}
                 </Label>
-                <Select value={packageId} onValueChange={setPackageId}>
+                <Select value={packageId} onValueChange={setPackageId} disabled={loadingPackages}>
                   <SelectTrigger className="border-2 border-border bg-card font-bold uppercase focus:border-primary">
-                    <SelectValue placeholder="SELECIONE O PACOTE..." />
+                    <SelectValue placeholder={loadingPackages ? "CARREGANDO PACOTES..." : "SELECIONE O PACOTE..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {packages.map((pkg) => (
-                      <SelectItem key={pkg.id} value={pkg.id}>
-                        {pkg.name}
+                    {packages.length === 0 && !loadingPackages ? (
+                      <SelectItem value="none" disabled>
+                        Nenhum pacote cadastrado
                       </SelectItem>
-                    ))}
+                    ) : (
+                      packages.map((pkg) => (
+                        <SelectItem key={pkg.id} value={pkg.id}>
+                          {pkg.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

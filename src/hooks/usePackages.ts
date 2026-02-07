@@ -26,23 +26,36 @@ export const usePackages = () => {
     const { data: packages = [], isLoading, error } = useQuery({
         queryKey: ['magodosdrinks_packages'],
         queryFn: async () => {
+            console.log('🔍 Fetching packages from database...');
+
             const { data, error } = await supabase
                 .from('magodosdrinks_packages')
                 .select('*')
                 .order('name');
+
             if (error) {
-                console.error('Error fetching packages:', error);
+                console.error('❌ Error fetching packages:', error);
                 throw error;
             }
+
+            console.log('✅ Packages fetched successfully:', data?.length || 0);
             return data as Package[];
-        }
+        },
+        retry: false, // Disable retry to avoid AbortError cascade
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 10, // 10 minutes
+        refetchOnMount: true,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
     });
 
     // Log packages for debugging
     if (packages.length > 0) {
         console.log('Packages loaded:', packages.length);
-    } else if (!isLoading && packages.length === 0) {
+    } else if (!isLoading && packages.length === 0 && !error) {
         console.warn('No packages found in database');
+    } else if (error) {
+        console.error('Error in packages query:', error);
     }
 
     const getPackageItems = async (packageId: string) => {

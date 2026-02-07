@@ -1,6 +1,3 @@
--- Create Packages Tables
--- Packages represent pre-configured bundles of ingredients for events
-
 -- 1. Packages Table
 CREATE TABLE IF NOT EXISTS public.magodosdrinks_packages (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -31,70 +28,46 @@ ALTER TABLE public.magodosdrinks_package_items ENABLE ROW LEVEL SECURITY;
 -- RLS Policies for Packages
 CREATE POLICY "Everyone can read packages"
   ON public.magodosdrinks_packages
-  FOR SELECT
-  TO authenticated
+  FOR SELECT TO authenticated
   USING (true);
 
-CREATE POLICY "Admins can insert packages"
+CREATE POLICY "Admins can manage packages"
   ON public.magodosdrinks_packages
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid()
-      AND (profiles.role = 'admin' OR profiles.cargo = 'admin')
-    )
-  );
-
-CREATE POLICY "Admins can update packages"
-  ON public.magodosdrinks_packages
-  FOR UPDATE
-  TO authenticated
+  FOR ALL TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-      AND (profiles.role = 'admin' OR profiles.cargo = 'admin')
-    )
-  );
-
-CREATE POLICY "Admins can delete packages"
-  ON public.magodosdrinks_packages
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid()
-      AND (profiles.role = 'admin' OR profiles.cargo = 'admin')
+      AND (
+        'admin' = ANY(profiles.roles) OR 
+        profiles.cargo = 'admin'
+      )
     )
   );
 
 -- RLS Policies for Package Items
 CREATE POLICY "Everyone can read package items"
   ON public.magodosdrinks_package_items
-  FOR SELECT
-  TO authenticated
+  FOR SELECT TO authenticated
   USING (true);
 
 CREATE POLICY "Admins can manage package items"
   ON public.magodosdrinks_package_items
-  FOR ALL
-  TO authenticated
+  FOR ALL TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-      AND (profiles.role = 'admin' OR profiles.cargo = 'admin')
+      AND (
+        'admin' = ANY(profiles.roles) OR 
+        profiles.cargo = 'admin'
+      )
     )
   );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_package_items_package_id
-  ON public.magodosdrinks_package_items(package_id);
-CREATE INDEX IF NOT EXISTS idx_package_items_ingredient_id
-  ON public.magodosdrinks_package_items(ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_package_items_package_id ON public.magodosdrinks_package_items(package_id);
+CREATE INDEX IF NOT EXISTS idx_package_items_ingredient_id ON public.magodosdrinks_package_items(ingredient_id);
 
 -- Auto-update timestamp trigger for packages
 CREATE OR REPLACE FUNCTION public.handle_updated_at_packages()
@@ -105,6 +78,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Dropar se já existir para evitar erro de duplicata ao rodar novamente
+DROP TRIGGER IF EXISTS set_updated_at_packages ON public.magodosdrinks_packages;
 CREATE TRIGGER set_updated_at_packages
   BEFORE UPDATE ON public.magodosdrinks_packages
   FOR EACH ROW
