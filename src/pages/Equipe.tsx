@@ -46,8 +46,7 @@ export default function Equipe() {
       await addStaff.mutateAsync({
         name: formName,
         phone: formPhone,
-        role: formRoles[0], // Keep for backward compatibility if needed by SQL
-        roles: formRoles,
+        role: formRoles[0], // Use first selected role (table only supports single role)
         daily_rate: parseFloat(formDailyRate) || 0
       });
       setIsAddOpen(false);
@@ -125,7 +124,7 @@ export default function Equipe() {
           {(['bartender', 'chefe_bar', 'montador'] as StaffRole[]).map((role) => (
             <Card key={role} className="border-white/10 bg-black/40">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-primary">{staff.filter(s => (s.roles || [s.role]).includes(role)).length}</p>
+                <p className="text-2xl font-bold text-primary">{staff.filter(s => s.role === role).length}</p>
                 <p className="text-xs font-mono uppercase text-muted-foreground">{getStaffRoleLabel(role)}s</p>
               </CardContent>
             </Card>
@@ -150,13 +149,9 @@ export default function Equipe() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate font-display text-lg font-bold uppercase text-white group-hover:text-primary transition-colors">{member.name}</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {(member.roles || [member.role]).map((r: string) => (
-                        <Badge key={r} className={`rounded-none border px-2 py-0.5 font-mono text-[10px] uppercase font-bold`} variant={getRoleBadgeVariant(r)}>
-                          {getStaffRoleLabel(r as StaffRole)}
-                        </Badge>
-                      ))}
-                    </div>
+                    <Badge className={`rounded-none border px-2 py-0.5 font-mono text-[10px] uppercase font-bold`} variant={getRoleBadgeVariant(member.role)}>
+                      {getStaffRoleLabel(member.role)}
+                    </Badge>
                   </div>
 
                   <div className="mt-1 flex items-center gap-4 text-xs font-mono uppercase text-muted-foreground">

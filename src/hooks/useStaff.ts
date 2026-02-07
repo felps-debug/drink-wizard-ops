@@ -9,10 +9,7 @@ export interface Staff {
     name: string;
     phone: string;
     role: StaffRole;
-    roles: StaffRole[];
     daily_rate: number;
-    notes?: string;
-    active: boolean;
     created_at: string;
 }
 
@@ -26,7 +23,6 @@ export function useStaff() {
             const { data, error } = await supabase
                 .from('magodosdrinks_staff')
                 .select('*')
-                .eq('active', true)
                 .order('name');
 
             if (error) throw error;
@@ -36,10 +32,10 @@ export function useStaff() {
 
     // Add new staff
     const addStaff = useMutation({
-        mutationFn: async (newStaff: Omit<Staff, 'id' | 'created_at' | 'active'>) => {
+        mutationFn: async (newStaff: Omit<Staff, 'id' | 'created_at'>) => {
             const { data, error } = await supabase
                 .from('magodosdrinks_staff')
-                .insert({ ...newStaff, active: true })
+                .insert(newStaff)
                 .select()
                 .single();
 
@@ -74,12 +70,12 @@ export function useStaff() {
         }
     });
 
-    // Deactivate staff (soft delete)
+    // Delete staff
     const removeStaff = useMutation({
         mutationFn: async (id: string) => {
             const { error } = await supabase
                 .from('magodosdrinks_staff')
-                .update({ active: false })
+                .delete()
                 .eq('id', id);
 
             if (error) throw error;
