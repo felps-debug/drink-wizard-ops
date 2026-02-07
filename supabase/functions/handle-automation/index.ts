@@ -7,6 +7,7 @@ interface WebhookPayload {
   table: string;
   record: Record<string, any>;
   old_record?: Record<string, any>;
+  event_type?: string; // HTTP Parameter from webhook config
 }
 
 interface AutomationTrigger {
@@ -122,22 +123,37 @@ serve(async (req) => {
     // Map webhook events to automation trigger events
     let triggerEvent = "";
 
-    if (payload.table === "event_checklists") {
+    // Priority 1: Use event_type HTTP Parameter if provided (from webhook config)
+    if (payload.event_type) {
+      // Map HTTP Parameter values to trigger event names
+      if (payload.event_type === "entrada" || payload.event_type === "inicial") {
+        triggerEvent = "checklist_entrada";
+      } else if (payload.event_type === "saida") {
+        triggerEvent = "checklist_saida";
+      } else if (payload.event_type === "event_created") {
+        triggerEvent = "event_created";
+      }
+      console.log(`[Automation] Using event_type parameter: ${payload.event_type} -> ${triggerEvent}`);
+    }
+    // Priority 2: Fallback to legacy table/type detection
+    else if (payload.table === "event_checklists") {
       // Trigger on checklist completion
       if (record.status === "completed") {
-        if (record.type === "entrada") {
+        if (record.type === "entrada" || record.type === "inicial") {
           triggerEvent = "checklist_entrada";
         } else if (record.type === "saida") {
           triggerEvent = "checklist_saida";
         }
       }
+      console.log(`[Automation] Using legacy detection: table=${payload.table}, record.type=${record.type} -> ${triggerEvent}`);
     } else if (payload.table === "events" && payload.type === "INSERT") {
       // Trigger on event creation
       triggerEvent = "event_created";
+      console.log(`[Automation] Using legacy detection: new event created -> ${triggerEvent}`);
     }
 
     if (!triggerEvent) {
-      console.log(`[Automation] No matching trigger for: table=${payload.table}, type=${payload.type}`);
+      console.log(`[Automation] No matching trigger for: table=${payload.table}, type=${payload.type}, event_type=${payload.event_type}`);
       return new Response(JSON.stringify({ message: "No matching trigger" }), {
         status: 200,
         headers: { "Content-Type": "application/json" }
