@@ -94,7 +94,10 @@ BEGIN
       EXISTS (
         SELECT 1 FROM public.profiles
         WHERE profiles.id = auth.uid()
-        AND (profiles.role = 'admin' OR profiles.cargo = 'admin')
+        AND (
+          'admin' = ANY(profiles.roles) OR
+          profiles.cargo = 'admin'
+        )
       )
     );
 END $$;

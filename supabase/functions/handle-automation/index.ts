@@ -208,7 +208,7 @@ serve(async (req) => {
           console.log(`[Automation] Fetching event details for: ${record.event_id}`);
           const { data: eventData, error: eventError } = await supabase
             .from("events")
-            .select("client_name, client_phone, client_email, date, location")
+            .select("client_name, client_phone, date, location")
             .eq("id", record.event_id)
             .single();
 
@@ -219,7 +219,6 @@ serve(async (req) => {
               ...substitutionData,
               client_name: eventData.client_name,
               client_phone: eventData.client_phone,
-              client_email: eventData.client_email,
               event_date: eventData.date,
               event_location: eventData.location
             };
