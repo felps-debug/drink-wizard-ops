@@ -94,22 +94,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsFetchingProfile(true);
 
     try {
-      // 1. Try to fetch profile from public.profiles with timeout
-      const profileQuery = supabase
+      // 1. Try to fetch profile from public.profiles
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-
-      // Add timeout to the query
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
-      );
-
-      const { data: profile, error } = await Promise.race([
-        profileQuery,
-        timeoutPromise
-      ]) as any;
 
       if (error && error.code !== 'PGRST116') {
         console.error("Error fetching profile:", error);

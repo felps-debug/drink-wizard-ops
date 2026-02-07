@@ -23,17 +23,27 @@ export interface PackageItem {
 export const usePackages = () => {
     const queryClient = useQueryClient();
 
-    const { data: packages = [], isLoading } = useQuery({
+    const { data: packages = [], isLoading, error } = useQuery({
         queryKey: ['magodosdrinks_packages'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('magodosdrinks_packages')
                 .select('*')
                 .order('name');
-            if (error) throw error;
+            if (error) {
+                console.error('Error fetching packages:', error);
+                throw error;
+            }
             return data as Package[];
         }
     });
+
+    // Log packages for debugging
+    if (packages.length > 0) {
+        console.log('Packages loaded:', packages.length);
+    } else if (!isLoading && packages.length === 0) {
+        console.warn('No packages found in database');
+    }
 
     const getPackageItems = async (packageId: string) => {
         const { data, error } = await supabase
