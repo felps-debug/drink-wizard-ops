@@ -73,7 +73,8 @@ function substituteVariables(
 }
 
 /**
- * Call whatsapp-notify Edge Function
+ * Send WhatsApp message directly via UAZapi
+ * This bypasses the whatsapp-notify Edge Function to avoid JWT issues
  */
 async function sendWhatsAppMessage(
   supabaseUrl: string,
@@ -82,23 +83,72 @@ async function sendWhatsAppMessage(
   message: string,
   testMode: boolean
 ): Promise<{ status: string; messageId?: string; message: string }> {
-  const response = await fetch(
-    `${supabaseUrl}/functions/v1/whatsapp-notify`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${serviceRoleKey}`
-      },
-      body: JSON.stringify({
-        phone,
-        message,
-        test_mode: testMode
-      })
-    }
-  );
+  const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://nexus-ultra.uazapi.com";
+  const UAZAPI_TOKEN = Deno.env.get("UAZAPI_TOKEN");
 
-  return await response.json();
+  // Normalize phone number (add 55 if needed)
+  const cleaned = phone.replace(/\D/g, "");
+  const normalized = cleaned.startsWith("55") ? cleaned : `55${cleaned}`;
+
+  // Test mode
+  if (testMode) {
+    console.log(`[WhatsApp TEST] Would send to ${normalized}: ${message.substring(0, 100)}`);
+    return {
+      status: "test",
+      messageId: "test-" + Date.now(),
+      message: `[TEST MODE] Message would be sent to ${normalized}`
+    };
+  }
+
+  if (!UAZAPI_TOKEN) {
+    console.error("[WhatsApp] Missing UAZAPI_TOKEN");
+    return {
+      status: "error",
+      message: "Missing UAZAPI_TOKEN environment variable"
+    };
+  }
+
+  console.log(`[WhatsApp] Calling UAZapi directly: ${UAZAPI_URL}/send/text`);
+  console.log(`[WhatsApp] Sending to: ${normalized}`);
+
+  try {
+    const response = await fetch(
+      `${UAZAPI_URL}/send/text`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "token": UAZAPI_TOKEN
+        },
+        body: JSON.stringify({
+          number: normalized,
+          text: message
+        })
+      }
+    );
+
+    const data = await response.json();
+    console.log(`[WhatsApp] UAZapi response:`, data);
+
+    if (response.ok) {
+      return {
+        status: "success",
+        messageId: data.id || data.messageId || "sent",
+        message: "Message sent successfully"
+      };
+    } else {
+      return {
+        status: "error",
+        message: data.message || data.error || "Failed to send message"
+      };
+    }
+  } catch (error) {
+    console.error("[WhatsApp] Exception:", error);
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
 }
 
 serve(async (req) => {
