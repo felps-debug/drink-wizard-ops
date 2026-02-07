@@ -67,6 +67,22 @@ BEGIN
     ALTER TABLE public.events ADD COLUMN observations text;
   END IF;
 
+  -- Adicionar financial_value em events se não existir (alias para contract_value)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'events' AND column_name = 'financial_value'
+  ) THEN
+    -- Se já tem contract_value, renomear para financial_value
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'events' AND column_name = 'contract_value'
+    ) THEN
+      ALTER TABLE public.events RENAME COLUMN contract_value TO financial_value;
+    ELSE
+      ALTER TABLE public.events ADD COLUMN financial_value numeric DEFAULT 0;
+    END IF;
+  END IF;
+
   -- Criar tabela magodosdrinks_staff se não existir
   CREATE TABLE IF NOT EXISTS public.magodosdrinks_staff (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
