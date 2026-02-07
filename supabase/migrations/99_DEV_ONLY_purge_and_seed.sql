@@ -32,6 +32,73 @@ SET session_replication_role = 'origin';
 -- PARTE 2: SEED - Dados de Teste
 -- ==========================================
 
+-- 2.0 GARANTIR COLUNAS EXISTEM
+DO $$
+BEGIN
+  -- Adicionar current_price em ingredients se não existir
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'ingredients' AND column_name = 'current_price'
+  ) THEN
+    ALTER TABLE public.ingredients ADD COLUMN current_price numeric DEFAULT 0;
+  END IF;
+
+  -- Adicionar client_phone em events se não existir
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'events' AND column_name = 'client_phone'
+  ) THEN
+    ALTER TABLE public.events ADD COLUMN client_phone text;
+  END IF;
+
+  -- Adicionar package_id em events se não existir
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'events' AND column_name = 'package_id'
+  ) THEN
+    ALTER TABLE public.events ADD COLUMN package_id uuid REFERENCES magodosdrinks_packages(id);
+  END IF;
+
+  -- Adicionar observations em events se não existir
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'events' AND column_name = 'observations'
+  ) THEN
+    ALTER TABLE public.events ADD COLUMN observations text;
+  END IF;
+
+  -- Criar tabela magodosdrinks_staff se não existir
+  CREATE TABLE IF NOT EXISTS public.magodosdrinks_staff (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL,
+    phone text NOT NULL,
+    role text NOT NULL,
+    daily_rate numeric DEFAULT 0,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+  );
+
+  -- Habilitar RLS para staff
+  ALTER TABLE public.magodosdrinks_staff ENABLE ROW LEVEL SECURITY;
+
+  -- Política: todos podem ler
+  DROP POLICY IF EXISTS "Everyone can read staff" ON public.magodosdrinks_staff;
+  CREATE POLICY "Everyone can read staff" ON public.magodosdrinks_staff
+    FOR SELECT TO authenticated USING (true);
+
+  -- Política: admin pode gerenciar
+  DROP POLICY IF EXISTS "Admins can manage staff" ON public.magodosdrinks_staff;
+  CREATE POLICY "Admins can manage staff" ON public.magodosdrinks_staff
+    FOR ALL TO authenticated
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid()
+        AND (profiles.role = 'admin' OR profiles.cargo = 'admin')
+      )
+    );
+END $$;
+
 -- 2.1 INSUMOS (Ingredientes)
 INSERT INTO public.ingredients (name, unit, category, min_stock, current_price) VALUES
 -- Destilados
@@ -228,23 +295,9 @@ BEGIN
     (SELECT id FROM magodosdrinks_packages WHERE name = 'Básico' LIMIT 1)
   ) RETURNING id INTO v_evento4_id;
 
-  -- Adicionar escala para Evento 1
-  v_staff_id := (SELECT id FROM magodosdrinks_staff WHERE name = 'João Chefe de Bar' LIMIT 1);
-  INSERT INTO public.magodosdrinks_assignments (event_id, staff_id, role, status)
-  VALUES (v_evento1_id, v_staff_id, 'chefe_bar', 'confirmed');
-
-  v_staff_id := (SELECT id FROM magodosdrinks_staff WHERE name = 'Carlos Bartender' LIMIT 1);
-  INSERT INTO public.magodosdrinks_assignments (event_id, staff_id, role, status)
-  VALUES (v_evento1_id, v_staff_id, 'bartender', 'confirmed');
-
-  v_staff_id := (SELECT id FROM magodosdrinks_staff WHERE name = 'Ana Mixologista' LIMIT 1);
-  INSERT INTO public.magodosdrinks_assignments (event_id, staff_id, role, status)
-  VALUES (v_evento1_id, v_staff_id, 'bartender', 'confirmed');
-
-  -- Adicionar escala para Evento 2
-  v_staff_id := (SELECT id FROM magodosdrinks_staff WHERE name = 'Julia Expert' LIMIT 1);
-  INSERT INTO public.magodosdrinks_assignments (event_id, staff_id, role, status)
-  VALUES (v_evento2_id, v_staff_id, 'bartender', 'confirmed');
+  -- Adicionar escala para Evento 1 (usando user_id, não staff_id)
+  -- Nota: magodosdrinks_assignments usa user_id (referência a profiles)
+  -- Então vamos pular as escalas por enquanto, pois staff é separado de users
 END $$;
 
 -- 2.5 AUTOMAÇÕES
@@ -321,11 +374,6 @@ SELECT
   '✅ EVENTOS CRIADOS',
   COUNT(*)
 FROM public.events
-UNION ALL
-SELECT
-  '✅ ESCALAS DEFINIDAS',
-  COUNT(*)
-FROM public.magodosdrinks_assignments
 UNION ALL
 SELECT
   '✅ AUTOMAÇÕES ATIVAS',
