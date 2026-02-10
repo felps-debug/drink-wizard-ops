@@ -27,7 +27,7 @@ export interface Evento {
   location: string;
   date: string;
   contractValue: number;
-  status: "agendado" | "montagem" | "em_curso" | "finalizado";
+  status: "agendado" | "montagem" | "entregue" | "em_curso" | "finalizado";
   createdAt: string;
   package_id?: string;
   observations?: string;
@@ -151,6 +151,7 @@ export const getStatusColor = (status: Evento["status"]) => {
   const colors = {
     agendado: "bg-primary/10 text-primary",
     montagem: "bg-warning text-warning-foreground",
+    entregue: "bg-blue-500/20 text-blue-400",
     em_curso: "bg-primary text-primary-foreground",
     finalizado: "bg-success text-success-foreground",
   };
@@ -161,6 +162,7 @@ export const getStatusLabel = (status: Evento["status"]) => {
   const labels = {
     agendado: "Agendado",
     montagem: "Montagem",
+    entregue: "Entregue",
     em_curso: "Em Curso",
     finalizado: "Finalizado",
   };

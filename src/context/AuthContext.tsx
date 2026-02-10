@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { User as MockUser, UserRole } from "@/lib/mock-data";
 
@@ -36,126 +36,89 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isFetchingProfile, setIsFetchingProfile] = useState(false);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        // Supabase already handles session persistence automatically
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session?.user) {
-          // Fetch profile without timeout - let it complete
-          await fetchProfile(session.user.id, session.user.email!);
-        } else {
-          setUser(null);
-          setLoading(false);
+    // Safety timeout — never hang on "Verificando Credenciais" forever
+    const safetyTimer = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn('[Auth] Safety timeout hit — forcing loading=false');
         }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        // Don't clear session on profile fetch error - keep user logged in
-        setLoading(false);
-      }
-    };
+        return false;
+      });
+    }, 8000);
 
-    checkUser();
-
-    // Listen for auth state changes
+    // Single source of truth: onAuthStateChange handles INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Auth] State change:', event, session?.user?.email || 'no user');
+      console.log('[Auth] Event:', event, session?.user?.email || 'no user');
 
-      if (event === 'SIGNED_OUT') {
-        console.log('[Auth] User signed out');
+      if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         setLoading(false);
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        console.log('[Auth] User signed in, fetching profile...');
-        try {
-          await fetchProfile(session.user.id, session.user.email!);
-        } catch (error) {
-          console.error("[Auth] Profile fetch failed:", error);
-          setLoading(false);
+        return;
+      }
+
+      if (event === 'TOKEN_REFRESHED') {
+        // Silent refresh — user is already set, nothing to do
+        return;
+      }
+
+      // INITIAL_SESSION (on page load/F5) or SIGNED_IN (fresh login)
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
+        // Guard against duplicate fetches using a ref (synchronous, works in closures)
+        if (fetchingRef.current) {
+          console.log('[Auth] Fetch already in progress, skipping');
+          return;
         }
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('[Auth] Token refreshed - keeping existing session');
-        // Silent refresh, don't fetch profile again - user already set
-      } else if (event === 'INITIAL_SESSION' && session?.user) {
-        console.log('[Auth] Initial session detected');
-        // This is handled by checkUser(), skip to avoid duplicate fetch
-      } else {
-        console.log('[Auth] Other event or no session:', event);
-        if (!session) {
-          setUser(null);
+        fetchingRef.current = true;
+
+        try {
+          const userId = session.user.id;
+          const email = session.user.email!;
+
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+
+          if (error) {
+            console.error('[Auth] Profile query error:', error);
+          }
+
+          const authUser: AuthUser = {
+            id: userId,
+            email,
+            name: (profile as any)?.nome || (profile as any)?.full_name || email.split('@')[0],
+            role: (profile as any)?.cargo || 'bartender',
+            avatar_url: undefined,
+          };
+
+          console.log('[Auth] Loaded:', authUser.email, authUser.role);
+          setUser(authUser);
+        } catch (err) {
+          console.error('[Auth] Profile fetch failed:', err);
+          // Fallback — keep user logged in with session data
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.email!.split('@')[0],
+            role: 'bartender',
+            avatar_url: undefined,
+          });
+        } finally {
           setLoading(false);
+          fetchingRef.current = false;
         }
       }
     });
 
     return () => {
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchProfile = async (userId: string, email: string) => {
-    // Prevent multiple simultaneous fetches for the same user
-    if (isFetchingProfile) {
-      console.log('[Auth] Profile fetch already in progress, skipping...');
-      return;
-    }
-
-    setIsFetchingProfile(true);
-    console.log('[Auth] Fetching profile for:', email);
-
-    try {
-      // 1. Try to fetch profile from public.profiles
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error("[Auth] Error fetching profile:", error);
-      }
-
-      // 2. Map correctly - handle different schema versions
-      const isOwner = email === 'xavier.davimot1@gmail.com';
-      // Try multiple field names for compatibility: cargo (old), role (new), or first item in roles array
-      const fetchedRole = (profile as any)?.cargo || profile?.role || (profile as any)?.roles?.[0] || 'bartender';
-      const finalRole = isOwner ? 'admin' : fetchedRole;
-
-      // Set user - this keeps session persistent
-      const authUser = {
-        id: userId,
-        email: email,
-        name: (profile as any)?.nome || profile?.full_name || email.split('@')[0],
-        role: finalRole,
-        avatar_url: undefined,
-      };
-
-      console.log('[Auth] Profile fetched successfully:', authUser.email, authUser.role);
-      setUser(authUser);
-      setLoading(false);
-    } catch (err) {
-      console.error("[Auth] Profile fetch error:", err);
-
-      // Fallback: Keep user logged in with basic info from session
-      const isOwner = email === 'xavier.davimot1@gmail.com';
-      const fallbackUser = {
-        id: userId,
-        email: email,
-        name: email.split('@')[0],
-        role: isOwner ? 'admin' : 'bartender',
-        avatar_url: undefined,
-      };
-
-      console.log('[Auth] Using fallback user data:', fallbackUser.email);
-      setUser(fallbackUser);
-      setLoading(false);
-    } finally {
-      setIsFetchingProfile(false);
-    }
-  };
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({

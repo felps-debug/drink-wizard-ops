@@ -176,6 +176,8 @@ export const useEvent = (id?: string) => {
 
   const saveChecklist = useMutation({
     mutationFn: async (data: { eventId: string; type: string; items: any[]; status: string }) => {
+      const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+
       const { data: existing } = await supabase
         .from('checklists')
         .select('id')
@@ -189,7 +191,7 @@ export const useEvent = (id?: string) => {
           .update({
             items: data.items,
             status: data.status,
-            checked_by: (await supabase.auth.getUser()).data.user?.id
+            checked_by: currentUserId,
           })
           .eq('id', existing.id);
         if (error) throw error;
@@ -201,13 +203,56 @@ export const useEvent = (id?: string) => {
             type: data.type,
             items: data.items,
             status: data.status,
-            checked_by: (await supabase.auth.getUser()).data.user?.id
+            checked_by: currentUserId,
           });
         if (error) throw error;
+      }
+
+      // Auto-update event status when checklist is completed
+      if (data.status === 'conferido') {
+        const newStatus = data.type === 'entrada' ? 'em_curso' : 'finalizado';
+
+        await supabase
+          .from('events')
+          .update({ status: newStatus })
+          .eq('id', data.eventId);
+
+        // Fetch event data to fire automation trigger
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('client_name, client_phone, date, location')
+          .eq('id', data.eventId)
+          .single();
+
+        if (eventData) {
+          // Fire handle-automation edge function with checklist trigger
+          const triggerEvent = data.type === 'entrada'
+            ? 'checklist_entrada'
+            : 'checklist_saida';
+
+          supabase.functions.invoke('handle-automation', {
+            body: {
+              type: 'UPDATE',
+              table: 'checklists',
+              event_type: data.type === 'entrada' ? 'entrada' : 'saida',
+              record: {
+                event_id: data.eventId,
+                type: data.type,
+                status: 'completed',
+                client_name: eventData.client_name,
+                client_phone: eventData.client_phone,
+                event_date: eventData.date,
+                event_location: eventData.location,
+              },
+            },
+          }).catch((err) => console.error('[Automation] Trigger failed:', err));
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checklists', id] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', id] });
       toast.success("Checklist salvo com sucesso");
     },
     onError: (err: any) => {
@@ -215,10 +260,62 @@ export const useEvent = (id?: string) => {
     }
   });
 
+  // Update event status and fire automation
+  const updateEventStatus = useMutation({
+    mutationFn: async ({ eventId, newStatus, triggerName }: {
+      eventId: string;
+      newStatus: string;
+      triggerName?: string;
+    }) => {
+      const { error } = await supabase
+        .from('events')
+        .update({ status: newStatus })
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      // Fire automation if triggerName is provided
+      if (triggerName) {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('client_name, client_phone, date, location')
+          .eq('id', eventId)
+          .single();
+
+        if (eventData) {
+          supabase.functions.invoke('handle-automation', {
+            body: {
+              type: 'UPDATE',
+              table: 'events',
+              event_type: triggerName,
+              record: {
+                event_id: eventId,
+                status: newStatus,
+                client_name: eventData.client_name,
+                client_phone: eventData.client_phone,
+                event_date: eventData.date,
+                event_location: eventData.location,
+              },
+            },
+          }).catch((err) => console.error('[Automation] Trigger failed:', err));
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', id] });
+      toast.success('Status do evento atualizado!');
+    },
+    onError: (err: any) => {
+      toast.error('Erro ao atualizar status: ' + err.message);
+    }
+  });
+
   return {
     event,
     checklists: checklists || [],
     isLoading: isLoadingEvent || isLoadingChecklists,
-    saveChecklist
+    saveChecklist,
+    updateEventStatus,
   };
 };

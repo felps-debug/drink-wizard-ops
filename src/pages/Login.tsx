@@ -24,6 +24,7 @@ export default function Login() {
   useEffect(() => {
     if (user && !authLoading) {
       console.log('[Login] User is authenticated, redirecting to home...');
+      setLoading(false);
       navigate("/", { replace: true });
     }
   }, [user, authLoading, navigate]);
@@ -35,11 +36,13 @@ export default function Login() {
     try {
       console.log('[Login] Attempting login for:', email);
       await signInWithEmail(email, password);
-      // Don't navigate here - let useEffect handle it when user is set
       console.log('[Login] Login request completed, waiting for auth state...');
+      // onAuthStateChange will set user → useEffect redirect kicks in
     } catch (err: any) {
       console.error('[Login] Login failed:', err);
       setError(err.message || "Erro ao fazer login");
+    } finally {
+      // Always reset local loading. Auth context handles its own loading.
       setLoading(false);
     }
   };
@@ -85,14 +88,14 @@ export default function Login() {
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-none border border-border bg-muted p-0">
-              <TabsTrigger 
-                value="login" 
+              <TabsTrigger
+                value="login"
                 className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 Entrar
               </TabsTrigger>
-              <TabsTrigger 
-                value="register" 
+              <TabsTrigger
+                value="register"
                 className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 Cadastrar
@@ -111,10 +114,10 @@ export default function Login() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="seu@email.com" 
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -123,18 +126,18 @@ export default function Login() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
+                  <Input
+                    id="password"
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="rounded-none border-border bg-background focus:border-primary"
                   />
                 </div>
-                <Button 
-                  type="submit" 
-                  className="w-full rounded-none font-bold uppercase" 
+                <Button
+                  type="submit"
+                  className="w-full rounded-none font-bold uppercase"
                   disabled={loading}
                 >
                   {loading ? "Entrando..." : "Acessar Sistema"}
@@ -146,9 +149,9 @@ export default function Login() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="reg-name">Nome Completo</Label>
-                  <Input 
-                    id="reg-name" 
-                    placeholder="João Barman" 
+                  <Input
+                    id="reg-name"
+                    placeholder="João Barman"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -157,10 +160,10 @@ export default function Login() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reg-email">Email</Label>
-                  <Input 
-                    id="reg-email" 
-                    type="email" 
-                    placeholder="seu@email.com" 
+                  <Input
+                    id="reg-email"
+                    type="email"
+                    placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -169,9 +172,9 @@ export default function Login() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reg-password">Senha</Label>
-                  <Input 
-                    id="reg-password" 
-                    type="password" 
+                  <Input
+                    id="reg-password"
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -179,9 +182,9 @@ export default function Login() {
                     className="rounded-none border-border bg-background focus:border-primary"
                   />
                 </div>
-                <Button 
-                  type="submit" 
-                  className="w-full rounded-none font-bold uppercase" 
+                <Button
+                  type="submit"
+                  className="w-full rounded-none font-bold uppercase"
                   disabled={loading}
                 >
                   {loading ? "Criando..." : "Criar Conta"}
@@ -199,8 +202,8 @@ export default function Login() {
             </div>
           </div>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="mt-4 w-full rounded-none border-2 border-border hover:bg-muted"
             onClick={handleGoogleLogin}
             disabled={loading}

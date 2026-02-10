@@ -42,7 +42,7 @@ export function useAllocations(eventId?: string) {
         }
     });
 
-    // Add staff to event and auto-notify
+    // Add staff to event and auto-notify via WhatsApp
     const allocateStaff = useMutation({
         mutationFn: async ({ staffId, dailyRate }: { staffId: string; dailyRate: number }) => {
             if (!eventId) throw new Error('Event ID required');
@@ -54,8 +54,8 @@ export function useAllocations(eventId?: string) {
                     event_id: eventId,
                     staff_id: staffId,
                     daily_rate: dailyRate,
-                    status: 'confirmado', // Set to confirmed immediately as per request
-                    whatsapp_sent: true
+                    status: 'confirmado',
+                    whatsapp_sent: false
                 })
                 .select(`
                     *,
@@ -65,15 +65,42 @@ export function useAllocations(eventId?: string) {
 
             if (error) throw error;
 
-            // 2. Auto-send WhatsApp to the hardcoded number
-            // User requested: "5585984658124" talking "Olá, voce foi escalado"
-            await whatsappService.sendMessage('5585984658124', 'Olá, voce foi escalado');
+            // 2. Fetch event details for the notification message
+            const { data: eventData } = await supabase
+                .from('events')
+                .select('client_name, date, location')
+                .eq('id', eventId)
+                .single();
+
+            const staffPhone = data.staff?.phone;
+            const staffName = data.staff?.name || 'Profissional';
+
+            if (staffPhone && eventData) {
+                const formattedDate = new Date(eventData.date).toLocaleDateString('pt-BR');
+                const message = `🎉 Olá ${staffName}! Você foi escalado para o evento:\n\n` +
+                    `📋 Cliente: ${eventData.client_name}\n` +
+                    `📅 Data: ${formattedDate}\n` +
+                    `📍 Local: ${eventData.location}\n\n` +
+                    `Confirme sua presença respondendo esta mensagem!`;
+
+                try {
+                    await whatsappService.sendMessage(staffPhone, message);
+                    // Mark as sent
+                    await supabase
+                        .from('magodosdrinks_allocations')
+                        .update({ whatsapp_sent: true })
+                        .eq('id', data.id);
+                } catch (whatsappErr) {
+                    console.error('[Allocation] WhatsApp failed:', whatsappErr);
+                    // Don't throw — allocation still succeeds even if WhatsApp fails
+                }
+            }
 
             return data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['magodosdrinks_allocations', eventId] });
-            toast.success('Profissional alocado e notificado!');
+            toast.success('Profissional alocado e notificado! 📱');
         },
         onError: (err: any) => {
             if (err.message.includes('duplicate')) {
