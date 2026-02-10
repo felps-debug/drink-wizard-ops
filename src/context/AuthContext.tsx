@@ -31,34 +31,74 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// Helper for timeout
+const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms))
+  ]);
+};
+
 async function buildAuthUser(userId: string, email: string, metaName: string): Promise<AuthUser> {
-  let { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle();
+  // 5s timeout on profile fetch to prevent infinite loading
+  // FIX: Wrap Supabase call in async IIFE to ensure it executes and returns data, not just the builder
+  let { data: profile, error } = await withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      return { data, error };
+    })(),
+    5000,
+    "Profile fetch"
+  ).catch(err => {
+    console.warn('[Auth] Profile fetch error/timeout:', err);
+    return { data: null, error: err };
+  });
 
   if (error) {
     console.error('[Auth] Profile query error:', error);
   }
 
-  // If profile doesn't exist, create one
-  if (!profile) {
+  // If profile doesn't exist AND no error occurred, create one
+  if (!profile && !error) {
     console.log('[Auth] No profile found — creating one');
-    const { data: newProfile, error: upsertError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        nome: metaName || email.split('@')[0],
-        email,
-        cargo: 'bartender',
-      }, { onConflict: 'id' })
-      .select()
-      .single();
+    // Upsert safely: only if truly missing. Use simple insert or upsert with caution.
+    const { data: newProfile, error: upsertError } = await withTimeout(
+      (async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            nome: metaName || email.split('@')[0],
+            email,
+            cargo: 'bartender',
+          }, { onConflict: 'id', ignoreDuplicates: true }) // Safer: don't overwrite existing
+          .select()
+          .single();
+        return { data, error };
+      })(),
+      5000,
+      "Profile creation"
+    ).catch(err => ({ data: null, error: err }));
 
-    if (!upsertError) {
+    if (!upsertError && newProfile) {
       profile = newProfile;
     }
+  }
+
+  // Fallback if still no profile (e.g. error on fetch AND create skipped/failed)
+  if (!profile) {
+    console.warn('[Auth] Using fallback user metadata (Profile missing or fetch failed)');
+    return {
+      id: userId,
+      email,
+      name: metaName || email.split('@')[0],
+      role: 'bartender', // Temporary fallback in memory, DOES NOT WRITE TO DB
+      avatar_url: undefined,
+    };
   }
 
   return {
@@ -76,72 +116,115 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // On mount: check for existing session
   useEffect(() => {
-    let cancelled = false;
+    let mounted = true;
 
-    const init = async () => {
-      console.log('[Auth] Init: Starting check checking existing session...');
+    const initSession = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
+        console.log('[Auth] Init checking session...');
+
+        // 1. Get Session with timeout (5s max)
+        const { data, error } = await withTimeout(
+          supabase.auth.getSession(),
+          5000,
+          "Session check"
+        ).catch(err => {
+          console.warn('[Auth] Session check timeout:', err);
+          return { data: { session: null }, error: err };
+        });
+
+        if (error && error.message !== 'Auth session missing!') {
           console.error('[Auth] getSession error:', error);
-          throw error;
         }
 
         const session = data?.session;
-        if (cancelled) return;
 
-        if (session?.user) {
-          console.log('[Auth] Existing session found for:', session.user.email);
-          const meta = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
+        // Fallback: If getSession misses, try getUser (server check) with timeout
+        let validUser = session?.user;
+        if (!validUser) {
           try {
-            const authUser = await buildAuthUser(session.user.id, session.user.email!, meta);
-            if (!cancelled) {
-              setUser(authUser);
-              console.log('[Auth] User loaded successfully:', authUser.email);
+            const { data: userData } = await withTimeout(
+              supabase.auth.getUser(),
+              5000,
+              "User check"
+            );
+            validUser = userData?.user;
+          } catch (err) {
+            console.warn('[Auth] getUser fallback failed:', err);
+          }
+        }
+
+        if (validUser && mounted) {
+          console.log('[Auth] Session found:', validUser.email);
+          const meta = validUser.user_metadata?.full_name || validUser.user_metadata?.name || '';
+
+          // 2. Build Profile
+          try {
+            const authUser = await buildAuthUser(validUser.id, validUser.email!, meta);
+            if (mounted) setUser(authUser);
+          } catch (e) {
+            console.error('[Auth] Profile load error/timeout, using fallback:', e);
+            if (mounted) {
+              // CRITICAL FALLBACK to prevent logout
+              setUser({
+                id: validUser.id,
+                email: validUser.email!,
+                name: meta || validUser.email!,
+                role: 'bartender',
+              });
             }
-          } catch (profileError) {
-            console.error('[Auth] Profile build failed during init:', profileError);
-            // Don't block loading — let user retry login if needed
           }
         } else {
-          console.log('[Auth] No existing session found');
+          console.log('[Auth] No session found');
+          if (mounted) setUser(null);
         }
       } catch (err) {
-        console.error('[Auth] Init critical error:', err);
+        console.error('[Auth] Initialization critical error:', err);
+        if (mounted) setUser(null);
       } finally {
-        if (!cancelled) {
-          console.log('[Auth] Init complete — turning off loading');
+        if (mounted) {
+          console.log('[Auth] Init complete. Loading overrides OFF.');
           setLoading(false);
         }
       }
     };
 
-    init();
+    initSession();
 
-    // Listen for future auth changes (sign in, sign out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Auth] Event:', event, session?.user?.email || 'no user');
-
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
+      if (!mounted) return;
+      console.log('[Auth] Auth Event:', event);
 
       if (event === 'SIGNED_IN' && session?.user) {
-        // Fresh login — build and set user
-        const meta = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
-        const authUser = await buildAuthUser(session.user.id, session.user.email!, meta);
-        console.log('[Auth] Signed in:', authUser.email, authUser.role);
-        setUser(authUser);
-        setLoading(false);
+        setLoading(true); // Lock UI while loading profile
+        const meta = session.user.user_metadata?.full_name || '';
+        try {
+          const authUser = await buildAuthUser(session.user.id, session.user.email!, meta);
+          if (mounted) setUser(authUser);
+        } catch (e) {
+          console.error('[Auth] Login profile build failed', e);
+          if (mounted) {
+            // Fallback on login failure too
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: meta || session.user.email!,
+              role: 'bartender'
+            });
+          }
+        }
+        if (mounted) setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Token refreshed, session is healthy.
       }
-
-      // TOKEN_REFRESHED and INITIAL_SESSION are handled by init() above
     });
 
     return () => {
-      cancelled = true;
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -158,36 +241,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
-      // Race Supabase against a 5s timeout to prevent infinite hanging on corrupt storage
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Login timeout")), 5000)
+      console.log('[Auth] Starting sign in with timeout protection...');
+      // Explicit 10s timeout for login action to prevent infinite spinner
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        10000,
+        "Sign in"
       );
 
-      const result: any = await Promise.race([
-        supabase.auth.signInWithPassword({ email, password }),
-        timeoutPromise
-      ]);
+      if (error) throw error;
 
-      if (result.error) throw result.error;
-
-      if (result.data?.user) {
-        const meta = result.data.user.user_metadata?.full_name || result.data.user.user_metadata?.name || '';
-        try {
-          const authUser = await buildAuthUser(result.data.user.id, result.data.user.email!, meta);
-          console.log('[Auth] signInWithEmail OK:', authUser.email, authUser.role);
-          setUser(authUser);
-          setLoading(false);
-        } catch (e) {
-          console.error("Error building user:", e);
-        }
+      if (data?.user) {
+        console.log('[Auth] Login successful API response');
       }
     } catch (err: any) {
-      if (err.message === "Login timeout" || err.message?.includes("stuck")) {
-        console.error("Critical Auth Timeout — cleaning corrupted storage...");
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.reload();
-        return;
+      console.error('[Auth] Login error:', err);
+      // Logic for infinite hang: if timeout, maybe we should clear storage?
+      if (err.message?.includes('timed out')) {
+        console.warn('[Auth] Login timed out.');
       }
       throw err;
     }

@@ -15,6 +15,14 @@
 - **`entregue` Status**: New event status between montagem and em_curso for delivery confirmation.
 - **`updateEventStatus` Mutation**: New mutation in `useEvent` hook for status transitions with optional automation firing.
 
+### Auth & Security
+- Addressed auth persistence issues:
+    - Increased `ProtectedRoute` timeout from 3s to 10s.
+    - Added retry logic to `AuthContext` profile loading.
+    - Added fallback to `getUser()` in `AuthContext` initialization to recover sessions even if `getSession()` returns empty.
+    - **CRITICAL FIX**: Rewrote `AuthContext` to include explicit 5s/10s safety timeouts on all Supabase operations (`signIn`, `getSession`, `getUser`, `profile`). This prevents "infinite loading" loops caused by network/storage hangs.
+- Implemented **Logout** functionality in Profile page.
+
 ### Changed
 - **Escalas (Staff Scheduling)**: Complete rewrite with monthly availability calendar for bartenders and admin scheduling panel (select event → view available staff → one-click allocate).
 

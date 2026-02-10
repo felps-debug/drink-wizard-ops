@@ -7,6 +7,9 @@ import { User, Phone, Mail, BadgeCheck, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
 
 interface UserProfile {
     id: string;
@@ -20,7 +23,20 @@ export default function Profile() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+
     const [formData, setFormData] = useState({ nome: "", telefone: "" });
+    const { signOut } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        try {
+            await signOut();
+            navigate("/login");
+            toast.success("Saiu com sucesso!");
+        } catch (error) {
+            toast.error("Erro ao sair");
+        }
+    };
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -161,6 +177,17 @@ export default function Profile() {
                             <Save className="mr-2 h-4 w-4" />
                             {isSaving ? "SALVANDO..." : "SALVAR ALTERAÇÕES"}
                         </Button>
+
+                        <div className="pt-6 border-t border-white/10">
+                            <Button
+                                onClick={handleLogout}
+                                variant="destructive"
+                                className="w-full rounded-none font-bold uppercase tracking-wide"
+                            >
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Sair do Sistema
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
