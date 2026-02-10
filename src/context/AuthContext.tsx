@@ -1,12 +1,10 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { User as MockUser, UserRole } from "@/lib/mock-data";
 
-// Extend the User type to include Auth properties if needed, or map Supabase user to App user
 export interface AuthUser {
   id: string;
   email: string;
-  name: string; // From metadata or profile
+  name: string;
   role: string;
   avatar_url?: string;
 }
@@ -33,89 +31,117 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+async function buildAuthUser(userId: string, email: string, metaName: string): Promise<AuthUser> {
+  let { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[Auth] Profile query error:', error);
+  }
+
+  // If profile doesn't exist, create one
+  if (!profile) {
+    console.log('[Auth] No profile found — creating one');
+    const { data: newProfile, error: upsertError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: userId,
+        nome: metaName || email.split('@')[0],
+        email,
+        cargo: 'bartender',
+      }, { onConflict: 'id' })
+      .select()
+      .single();
+
+    if (!upsertError) {
+      profile = newProfile;
+    }
+  }
+
+  return {
+    id: userId,
+    email,
+    name: (profile as any)?.nome || (profile as any)?.full_name || metaName || email.split('@')[0],
+    role: (profile as any)?.cargo || 'bartender',
+    avatar_url: undefined,
+  };
+}
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const fetchingRef = useRef(false);
 
+  // On mount: check for existing session
   useEffect(() => {
-    // Safety timeout — never hang on "Verificando Credenciais" forever
-    const safetyTimer = setTimeout(() => {
-      setLoading((prev) => {
-        if (prev) {
-          console.warn('[Auth] Safety timeout hit — forcing loading=false');
-        }
-        return false;
-      });
-    }, 8000);
+    let cancelled = false;
 
-    // Single source of truth: onAuthStateChange handles INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED
+    const init = async () => {
+      console.log('[Auth] Init: Starting check checking existing session...');
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[Auth] getSession error:', error);
+          throw error;
+        }
+
+        const session = data?.session;
+        if (cancelled) return;
+
+        if (session?.user) {
+          console.log('[Auth] Existing session found for:', session.user.email);
+          const meta = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
+          try {
+            const authUser = await buildAuthUser(session.user.id, session.user.email!, meta);
+            if (!cancelled) {
+              setUser(authUser);
+              console.log('[Auth] User loaded successfully:', authUser.email);
+            }
+          } catch (profileError) {
+            console.error('[Auth] Profile build failed during init:', profileError);
+            // Don't block loading — let user retry login if needed
+          }
+        } else {
+          console.log('[Auth] No existing session found');
+        }
+      } catch (err) {
+        console.error('[Auth] Init critical error:', err);
+      } finally {
+        if (!cancelled) {
+          console.log('[Auth] Init complete — turning off loading');
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    // Listen for future auth changes (sign in, sign out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth] Event:', event, session?.user?.email || 'no user');
 
-      if (event === 'SIGNED_OUT' || !session) {
+      if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
         return;
       }
 
-      if (event === 'TOKEN_REFRESHED') {
-        // Silent refresh — user is already set, nothing to do
-        return;
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Fresh login — build and set user
+        const meta = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
+        const authUser = await buildAuthUser(session.user.id, session.user.email!, meta);
+        console.log('[Auth] Signed in:', authUser.email, authUser.role);
+        setUser(authUser);
+        setLoading(false);
       }
 
-      // INITIAL_SESSION (on page load/F5) or SIGNED_IN (fresh login)
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
-        // Guard against duplicate fetches using a ref (synchronous, works in closures)
-        if (fetchingRef.current) {
-          console.log('[Auth] Fetch already in progress, skipping');
-          return;
-        }
-        fetchingRef.current = true;
-
-        try {
-          const userId = session.user.id;
-          const email = session.user.email!;
-
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
-
-          if (error) {
-            console.error('[Auth] Profile query error:', error);
-          }
-
-          const authUser: AuthUser = {
-            id: userId,
-            email,
-            name: (profile as any)?.nome || (profile as any)?.full_name || email.split('@')[0],
-            role: (profile as any)?.cargo || 'bartender',
-            avatar_url: undefined,
-          };
-
-          console.log('[Auth] Loaded:', authUser.email, authUser.role);
-          setUser(authUser);
-        } catch (err) {
-          console.error('[Auth] Profile fetch failed:', err);
-          // Fallback — keep user logged in with session data
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.email!.split('@')[0],
-            role: 'bartender',
-            avatar_url: undefined,
-          });
-        } finally {
-          setLoading(false);
-          fetchingRef.current = false;
-        }
-      }
+      // TOKEN_REFRESHED and INITIAL_SESSION are handled by init() above
     });
 
     return () => {
-      clearTimeout(safetyTimer);
+      cancelled = true;
       subscription.unsubscribe();
     };
   }, []);
@@ -131,18 +157,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
+      // Race Supabase against a 5s timeout to prevent infinite hanging on corrupt storage
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Login timeout")), 5000)
+      );
 
-      // Session is now handled by onAuthStateChange - no setTimeout needed
-      // The fetchProfile will be called automatically by the listener
-    } catch (err) {
-      setLoading(false);
+      const result: any = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        timeoutPromise
+      ]);
+
+      if (result.error) throw result.error;
+
+      if (result.data?.user) {
+        const meta = result.data.user.user_metadata?.full_name || result.data.user.user_metadata?.name || '';
+        try {
+          const authUser = await buildAuthUser(result.data.user.id, result.data.user.email!, meta);
+          console.log('[Auth] signInWithEmail OK:', authUser.email, authUser.role);
+          setUser(authUser);
+          setLoading(false);
+        } catch (e) {
+          console.error("Error building user:", e);
+        }
+      }
+    } catch (err: any) {
+      if (err.message === "Login timeout" || err.message?.includes("stuck")) {
+        console.error("Critical Auth Timeout — cleaning corrupted storage...");
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.reload();
+        return;
+      }
       throw err;
     }
   };
@@ -152,9 +198,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        data: {
-          full_name: name,
-        },
+        data: { full_name: name },
       },
     });
     if (error) throw error;
@@ -174,13 +218,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      user,
-      loading,
-      signInWithGoogle,
-      signInWithEmail,
-      signUpWithEmail,
-      resetPassword,
-      signOut
+      user, loading,
+      signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signOut,
     }}>
       {children}
     </AuthContext.Provider>

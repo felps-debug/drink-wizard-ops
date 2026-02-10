@@ -12,12 +12,47 @@ import { useEvents } from "@/hooks/useEvents";
 
 export function StaffDashboard() {
   const { user } = useAuth();
-  const { events, isLoading } = useEvents();
 
-  // Real filtering for next event
-  const myNextEvent = events
-    .filter(e => e.status !== 'finalizado')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+
+  const { events, isLoading, updateEventStatus } = useEvents();
+
+  // Filter events based on role
+  const getRelevantEvents = () => {
+    if (!events) return [];
+    const now = new Date();
+
+    // Sort by date closest to now
+    const sorted = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (user?.role === 'montador') {
+      return sorted.filter(e => e.status === 'agendado' || e.status === 'montagem');
+    }
+    if (user?.role === 'entregador') {
+      return sorted.filter(e => e.status === 'montado' || e.status === 'entregue');
+    }
+    // Bartenders and others see upcoming events
+    return sorted.filter(e => e.status !== 'finalizado');
+  };
+
+  const myNextEvent = getRelevantEvents()[0];
+
+  const handleStatusUpdate = async (event: any, newStatus: any) => {
+    let triggerName = undefined;
+    if (newStatus === 'montagem') triggerName = 'inicio_montagem';
+    if (newStatus === 'montado') triggerName = 'fim_montagem';
+    if (newStatus === 'entregue') triggerName = 'entrega_realizada';
+
+    try {
+      await updateEventStatus.mutateAsync({
+        eventId: event.id,
+        newStatus,
+        triggerName
+      });
+    } catch (error) {
+      console.error("Failed to update status", error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -39,7 +74,8 @@ export function StaffDashboard() {
         <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground bg-primary/10 inline-block px-2 py-1">
           {user?.role === 'admin' ? 'Comandante Geral' :
             user?.role === 'chefe_bar' ? 'Chefe de Operações' :
-              user?.role === 'bartender' ? 'Agente de Cocktails' : 'Especialista em Montagem'}
+              user?.role === 'bartender' ? 'Agente de Cocktails' :
+                user?.role === 'montador' ? 'Especialista em Montagem' : 'Logística e Entrega'}
         </p>
       </section>
 
@@ -72,12 +108,41 @@ export function StaffDashboard() {
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="h-8 w-8 -rotate-45 text-primary transition-transform group-hover:rotate-0" />
+                  {/* Action Buttons for Workflow */}
+                  <div className="flex flex-col gap-2 z-10">
+                    {user?.role === 'montador' && myNextEvent.status === 'agendado' && (
+                      <Button
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(myNextEvent, 'montagem'); }}
+                        className="bg-warning text-black hover:bg-warning/80 font-bold uppercase"
+                      >
+                        Iniciar Montagem
+                      </Button>
+                    )}
+                    {user?.role === 'montador' && myNextEvent.status === 'montagem' && (
+                      <Button
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(myNextEvent, 'montado'); }}
+                        className="bg-success text-white hover:bg-success/80 font-bold uppercase"
+                      >
+                        Finalizar Montagem
+                      </Button>
+                    )}
+                    {user?.role === 'entregador' && myNextEvent.status === 'montado' && (
+                      <Button
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(myNextEvent, 'entregue'); }}
+                        className="bg-blue-500 text-white hover:bg-blue-600 font-bold uppercase"
+                      >
+                        Confirmar Entrega
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-8 border-t border-white/10 pt-4">
-                  <p className="font-mono text-[10px] text-muted-foreground uppercase mb-1">LOCAL OPERATIVO</p>
-                  <p className="font-display text-lg uppercase text-white font-bold">{myNextEvent.location}</p>
+                <div className="mt-8 border-t border-white/10 pt-4 flex justify-between items-end">
+                  <div>
+                    <p className="font-mono text-[10px] text-muted-foreground uppercase mb-1">LOCAL OPERATIVO</p>
+                    <p className="font-display text-lg uppercase text-white font-bold">{myNextEvent.location}</p>
+                  </div>
+                  <ArrowRight className="h-8 w-8 -rotate-45 text-primary transition-transform group-hover:rotate-0" />
                 </div>
               </div>
             </div>

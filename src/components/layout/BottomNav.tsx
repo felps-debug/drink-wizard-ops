@@ -1,70 +1,92 @@
-import { Home, Calendar, Package, Users, BarChart3, Zap, Map, User, Box, LucideIcon } from "lucide-react";
+
 import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { Home, Calendar, Package, Users, BarChart3, Settings, Wine, User, Building2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { UserRole } from "@/lib/mock-data";
-
-interface NavItem {
-  icon: LucideIcon;
-  name: string;
-  path: string;
-  roles: (UserRole | "*")[];
-}
-
-const navItems: NavItem[] = [
-  { icon: Home, name: "Início", path: "/", roles: ["*"] },
-  { icon: Calendar, name: "Eventos", path: "/eventos", roles: ["*"] },
-  { icon: Box, name: "Insumos", path: "/insumos", roles: ["admin", "chefe_bar"] },
-  { icon: Users, name: "Equipe", path: "/equipe", roles: ["admin", "chefe_bar"] },
-  { icon: Package, name: "Pacotes", path: "/pacotes", roles: ["admin"] },
-  { icon: Zap, name: "Automações", path: "/automacoes", roles: ["admin"] },
-  { icon: Map, name: "Escalas", path: "/escalas", roles: ["*"] },
-  {
-    icon: BarChart3,
-    name: "Relatórios",
-    path: "/relatorios",
-    roles: ['admin']
-  },
-  { icon: User, name: "Perfil", path: "/profile", roles: ["*"] },
-];
 
 export function BottomNav() {
   const location = useLocation();
   const { user } = useAuth();
 
-  const filteredItems = navItems.filter(item => {
-    if (item.roles.includes("*")) return true;
-    return user && item.roles.includes(user.role as any);
-  });
+  const isActive = (path: string) => location.pathname === path;
 
-  if (!user) return null;
+  const navItems = [
+    {
+      icon: Home,
+      label: "Início",
+      path: "/",
+      roles: ['admin', 'chefe_bar', 'bartender', 'montador', 'entregador']
+    },
+    {
+      icon: Calendar,
+      label: "Eventos",
+      path: "/eventos",
+      roles: ['admin', 'chefe_bar', 'bartender']
+    },
+    {
+      icon: Wine,
+      label: "Insumos",
+      path: "/insumos",
+      roles: ['admin', 'chefe_bar']
+    },
+    {
+      icon: Building2,
+      label: "Clientes",
+      path: "/clientes",
+      roles: ['admin', 'chefe_bar']
+    },
+    {
+      icon: Package,
+      label: "Pacotes",
+      path: "/pacotes",
+      roles: ['admin'] // Only admin for now, logic can change
+    },
+    {
+      icon: Users,
+      label: "Equipe",
+      path: "/equipe",
+      roles: ['admin']
+    },
+    {
+      icon: BarChart3,
+      label: "Metrics",
+      path: "/relatorios",
+      roles: ['admin']
+    },
+    {
+      icon: User,
+      label: "Perfil",
+      path: "/profile",
+      roles: ['admin', 'chefe_bar', 'bartender', 'montador', 'entregador']
+    }
+  ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-white/20 bg-background/95 backdrop-blur-xl safe-area-bottom pb-1">
-      <div className="flex items-center justify-around py-2 overflow-x-auto">
-        {filteredItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1 text-[10px] uppercase transition-all duration-300",
-                isActive
-                  ? "text-primary scale-110"
-                  : "text-muted-foreground hover:text-foreground hover:scale-105"
-              )}
-            >
-              <div className={cn(
-                "flex items-center justify-center rounded-lg p-1.5 transition-all",
-                isActive ? "bg-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.3)]" : "bg-transparent"
-              )}>
-                <item.icon className={cn("h-5 w-5", isActive && "stroke-[2.5]")} />
-              </div>
-              <span className={cn(isActive ? "font-bold text-primary" : "font-medium")}>{item.name}</span>
-            </Link>
-          );
-        })}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/80 backdrop-blur-lg pb-safe">
+      <div className="flex items-center justify-around p-3 md:justify-center md:gap-8">
+        {navItems
+          .filter(item => !item.roles || (user && item.roles.includes(user.role as any)))
+          .map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center gap-1 transition-all ${active
+                    ? "text-primary scale-110"
+                    : "text-muted-foreground hover:text-primary/70"
+                  }`}
+              >
+                <div className={`p-1.5 rounded-lg transition-colors ${active ? "bg-primary/20" : ""}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-wider hidden md:block">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
       </div>
     </nav>
   );

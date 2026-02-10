@@ -15,6 +15,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { usePackages } from "@/hooks/usePackages";
+import { useClients } from "@/hooks/useClients";
+import { Plus } from "lucide-react";
+import { ClientDialog } from "@/components/clients/ClientDialog";
 
 export default function NovoEvento() {
   const navigate = useNavigate();
@@ -29,7 +32,35 @@ export default function NovoEvento() {
   const [location, setLocation] = useState("");
   const [contractValue, setContractValue] = useState("");
   const [packageId, setPackageId] = useState<string | undefined>(undefined);
+
+
   const [observations, setObservations] = useState("");
+
+  // Client selection state
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+  const { clients = [], isLoading: loadingClients, addClient: addClientMutation } = useClients();
+
+  // Populate client data when selected
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    const client = clients.find(c => c.id === clientId);
+    if (client) {
+      setClientName(client.name);
+      setClientPhone(client.phone || "");
+    }
+  };
+
+  const handleCreateClient = async (data: any) => {
+    // Create client and select it
+    // Note: addClientMutation logic in useClients should return data ideally, 
+    // but standard mutation might not return the new ID easily if not wired up so.
+    // However, invalidateQueries will refresh the list.
+    // We will rely on the user selecting the new client after creation for now, 
+    // or we can try to find it.
+    await addClientMutation.mutateAsync(data);
+    // We might need to handle auto-selection here if needed, but let's keep it simple.
+  };
 
   const { packages = [], isLoading: loadingPackages } = usePackages();
 
@@ -56,6 +87,7 @@ export default function NovoEvento() {
         contractValue: Number(contractValue),
         status: "agendado", // Default status
         package_id: packageId,
+        client_id: selectedClientId || undefined, // Add client_id
         observations
       });
 
@@ -86,10 +118,31 @@ export default function NovoEvento() {
             <h2 className="font-display text-xl font-bold uppercase text-primary border-l-4 border-primary pl-3">
               Cliente
             </h2>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="clientSelect" className="font-mono text-xs uppercase">
+                  Selecionar Cliente Existente
+                </Label>
+                <Select value={selectedClientId} onValueChange={handleClientSelect}>
+                  <SelectTrigger className="border-2 border-border bg-card font-bold uppercase focus:border-primary">
+                    <SelectValue placeholder={loadingClients ? "Carregando..." : "Selecione um Cliente..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map(client => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="button" onClick={() => setIsClientDialogOpen(true)} className="aspect-square border-2 border-primary bg-primary mb-[2px]">
+                <Plus className="h-4 w-4 text-white" />
+              </Button>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="clientName" className="font-mono text-xs uppercase">
-                  Nome do Cliente
+                  Nome do Cliente (Confirmar)
                 </Label>
                 <Input
                   id="clientName"
@@ -102,7 +155,7 @@ export default function NovoEvento() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="clientPhone" className="font-mono text-xs uppercase">
-                  Telefone / Contato
+                  Telefone / Contato (Confirmar)
                 </Label>
                 <Input
                   id="clientPhone"
@@ -114,6 +167,12 @@ export default function NovoEvento() {
                 />
               </div>
             </div>
+
+            <ClientDialog
+              open={isClientDialogOpen}
+              onOpenChange={setIsClientDialogOpen}
+              onSubmit={handleCreateClient}
+            />
           </section>
 
           {/* Logistics */}

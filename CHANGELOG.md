@@ -3,8 +3,9 @@
 ## [Unreleased]
 ### Fixed
 - **Login Persistence**: Removed hardcoded admin email in `AuthContext.tsx`. Roles now derived from DB `cargo` field.
-- **Auth Loading Hang**: Rewrote auth initialization — uses `onAuthStateChange` as single source of truth with `useRef` guard and 8s safety timeout. Fixes "Verificando Credenciais" hanging forever on F5.
-- **Login Button Hang**: Fixed `Login.tsx` handleLogin not resetting local loading state on success — button stuck on "Entrando..." forever.
+- **Auth Loading Hang**: Complete rewrite of `AuthContext.tsx` — uses `getSession()` for init + `onAuthStateChange` for future events. Removed `fetchingRef` guard that caused race conditions. Added auto-upsert for missing profiles.
+- **Login Button Hang**: `signInWithEmail` now builds user immediately after `signInWithPassword` success. `handleLogin` navigates directly to dashboard instead of relying on `useEffect` watching auth state. Eliminates "ENTRANDO..." stuck state.
+- **Email Confirmation**: Required disabling "Confirm email" in Supabase Auth settings for operational app.
 - **Checklist Automation**: `saveChecklist` now auto-transitions event status (entrada→em_curso, saída→finalizado) and fires `handle-automation` edge function with correct event data for WhatsApp templates.
 - **WhatsApp Allocation**: `useAllocations.ts` now sends WhatsApp to actual staff phone with event details (was hardcoded to a single number).
 

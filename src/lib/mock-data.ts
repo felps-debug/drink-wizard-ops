@@ -1,6 +1,6 @@
 // Mock data for development without backend
 
-export type UserRole = "admin" | "chefe_bar" | "bartender" | "montador";
+export type UserRole = "admin" | "chefe_bar" | "bartender" | "montador" | "entregador";
 
 export interface User {
   id: string;
@@ -22,12 +22,13 @@ export interface Insumo {
 
 export interface Evento {
   id: string;
+  client_id?: string;
   clientName: string;
   clientPhone: string;
   location: string;
   date: string;
   contractValue: number;
-  status: "agendado" | "montagem" | "entregue" | "em_curso" | "finalizado";
+  status: "agendado" | "montagem" | "montado" | "entregue" | "em_curso" | "finalizado";
   createdAt: string;
   package_id?: string;
   observations?: string;
@@ -61,6 +62,16 @@ export interface Escala {
   userId: string;
   userName: string;
   confirmed: boolean;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  cpf_cnpj?: string;
+  notes?: string;
+  active: boolean;
 }
 
 // Current logged user (mock) - DEPRECATED: Use useAuth() context
@@ -151,6 +162,7 @@ export const getStatusColor = (status: Evento["status"]) => {
   const colors = {
     agendado: "bg-primary/10 text-primary",
     montagem: "bg-warning text-warning-foreground",
+    montado: "bg-orange-500/20 text-orange-400",
     entregue: "bg-blue-500/20 text-blue-400",
     em_curso: "bg-primary text-primary-foreground",
     finalizado: "bg-success text-success-foreground",
@@ -162,6 +174,7 @@ export const getStatusLabel = (status: Evento["status"]) => {
   const labels = {
     agendado: "Agendado",
     montagem: "Montagem",
+    montado: "Pronto p/ Entrega",
     entregue: "Entregue",
     em_curso: "Em Curso",
     finalizado: "Finalizado",
@@ -175,6 +188,7 @@ export const getRoleLabel = (role: UserRole) => {
     chefe_bar: "Chefe de Bar",
     bartender: "Bartender",
     montador: "Montador",
+    entregador: "Entregador",
   };
   return labels[role];
 };

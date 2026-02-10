@@ -36,13 +36,12 @@ export default function Login() {
     try {
       console.log('[Login] Attempting login for:', email);
       await signInWithEmail(email, password);
-      console.log('[Login] Login request completed, waiting for auth state...');
-      // onAuthStateChange will set user → useEffect redirect kicks in
+      console.log('[Login] Login OK — navigating to dashboard');
+      navigate("/", { replace: true });
     } catch (err: any) {
       console.error('[Login] Login failed:', err);
       setError(err.message || "Erro ao fazer login");
     } finally {
-      // Always reset local loading. Auth context handles its own loading.
       setLoading(false);
     }
   };

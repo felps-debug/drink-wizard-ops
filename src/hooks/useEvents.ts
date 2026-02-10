@@ -19,6 +19,7 @@ export const useEvents = () => {
 
       return data.map((event: any) => ({
         id: event.id,
+        client_id: event.client_id,
         clientName: event.client_name,
         clientPhone: event.client_phone || '',
         location: event.location,
@@ -57,6 +58,7 @@ export const useEvents = () => {
       const { data, error } = await supabase
         .from('events')
         .insert([{
+          client_id: newEvent.client_id,
           client_name: newEvent.clientName,
           client_phone: newEvent.clientPhone,
           date: newEvent.date,
@@ -87,6 +89,7 @@ export const useEvents = () => {
       const { error } = await supabase
         .from('events')
         .update({
+          client_id: event.client_id,
           client_name: event.clientName,
           client_phone: event.clientPhone,
           date: event.date,
@@ -109,13 +112,65 @@ export const useEvents = () => {
     }
   });
 
+  // Update event status and fire automation (Moved from useEvent to apply globally)
+  const updateEventStatus = useMutation({
+    mutationFn: async ({ eventId, newStatus, triggerName }: {
+      eventId: string;
+      newStatus: string;
+      triggerName?: string;
+    }) => {
+      const { error } = await supabase
+        .from('events')
+        .update({ status: newStatus })
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      // Fire automation if triggerName is provided
+      if (triggerName) {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('client_name, client_phone, date, location')
+          .eq('id', eventId)
+          .single();
+
+        if (eventData) {
+          supabase.functions.invoke('handle-automation', {
+            body: {
+              type: 'UPDATE',
+              table: 'events',
+              event_type: triggerName,
+              record: {
+                event_id: eventId,
+                status: newStatus,
+                client_name: eventData.client_name,
+                client_phone: eventData.client_phone,
+                event_date: eventData.date,
+                event_location: eventData.location,
+              },
+            },
+          }).catch((err) => console.error('[Automation] Trigger failed:', err));
+        }
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', variables.eventId] });
+      toast.success('Status atualizado!');
+    },
+    onError: (err: any) => {
+      toast.error('Erro ao atualizar status: ' + err.message);
+    }
+  });
+
   return {
     events: events || [],
     isLoading,
     error,
     addEvent,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    updateEventStatus
   };
 };
 
@@ -260,62 +315,11 @@ export const useEvent = (id?: string) => {
     }
   });
 
-  // Update event status and fire automation
-  const updateEventStatus = useMutation({
-    mutationFn: async ({ eventId, newStatus, triggerName }: {
-      eventId: string;
-      newStatus: string;
-      triggerName?: string;
-    }) => {
-      const { error } = await supabase
-        .from('events')
-        .update({ status: newStatus })
-        .eq('id', eventId);
-
-      if (error) throw error;
-
-      // Fire automation if triggerName is provided
-      if (triggerName) {
-        const { data: eventData } = await supabase
-          .from('events')
-          .select('client_name, client_phone, date, location')
-          .eq('id', eventId)
-          .single();
-
-        if (eventData) {
-          supabase.functions.invoke('handle-automation', {
-            body: {
-              type: 'UPDATE',
-              table: 'events',
-              event_type: triggerName,
-              record: {
-                event_id: eventId,
-                status: newStatus,
-                client_name: eventData.client_name,
-                client_phone: eventData.client_phone,
-                event_date: eventData.date,
-                event_location: eventData.location,
-              },
-            },
-          }).catch((err) => console.error('[Automation] Trigger failed:', err));
-        }
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: ['events', id] });
-      toast.success('Status do evento atualizado!');
-    },
-    onError: (err: any) => {
-      toast.error('Erro ao atualizar status: ' + err.message);
-    }
-  });
 
   return {
     event,
     checklists: checklists || [],
     isLoading: isLoadingEvent || isLoadingChecklists,
     saveChecklist,
-    updateEventStatus,
   };
 };

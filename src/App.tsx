@@ -13,11 +13,13 @@ import Automacoes from "./pages/Automacoes";
 import EventoDetalhe from "./pages/EventoDetalhe";
 import NovoEvento from "./pages/NovoEvento";
 import Login from "./pages/Login";
+import AuthReset from "./pages/AuthReset";
 import ChecklistEntrada from "./pages/ChecklistEntrada";
 import ChecklistSaida from "./pages/ChecklistSaida";
 import Profile from "./pages/Profile";
 import Escalas from "./pages/Escalas";
 import Pacotes from "./pages/Pacotes";
+import Clientes from "./pages/Clientes";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -44,6 +46,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/auth-reset" element={<AuthReset />} />
 
               {/* Protected Routes */}
               <Route element={<ProtectedRoute />}>
@@ -60,6 +63,7 @@ const App = () => (
               {/* Admin & Chefe de Bar Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin', 'chefe_bar']} />}>
                 <Route path="/insumos" element={<Insumos />} />
+                <Route path="/clientes" element={<Clientes />} />
                 <Route path="/eventos/novo" element={<NovoEvento />} />
               </Route>
 
