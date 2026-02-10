@@ -62,21 +62,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] State change:', event, session?.user?.email || 'no user');
+
       if (event === 'SIGNED_OUT') {
+        console.log('[Auth] User signed out');
         setUser(null);
         setLoading(false);
       } else if (event === 'SIGNED_IN' && session?.user) {
+        console.log('[Auth] User signed in, fetching profile...');
         try {
           await fetchProfile(session.user.id, session.user.email!);
         } catch (error) {
-          console.error("Profile fetch failed:", error);
+          console.error("[Auth] Profile fetch failed:", error);
           setLoading(false);
         }
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        // Silent refresh, don't fetch profile again
+        console.log('[Auth] Token refreshed - keeping existing session');
+        // Silent refresh, don't fetch profile again - user already set
+      } else if (event === 'INITIAL_SESSION' && session?.user) {
+        console.log('[Auth] Initial session detected');
+        // This is handled by checkUser(), skip to avoid duplicate fetch
       } else {
-        setUser(null);
-        setLoading(false);
+        console.log('[Auth] Other event or no session:', event);
+        if (!session) {
+          setUser(null);
+          setLoading(false);
+        }
       }
     });
 
@@ -86,12 +97,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const fetchProfile = async (userId: string, email: string) => {
-    // Prevent multiple simultaneous fetches
+    // Prevent multiple simultaneous fetches for the same user
     if (isFetchingProfile) {
+      console.log('[Auth] Profile fetch already in progress, skipping...');
       return;
     }
 
     setIsFetchingProfile(true);
+    console.log('[Auth] Fetching profile for:', email);
 
     try {
       // 1. Try to fetch profile from public.profiles
@@ -102,7 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error("Error fetching profile:", error);
+        console.error("[Auth] Error fetching profile:", error);
       }
 
       // 2. Map correctly - handle different schema versions
@@ -112,28 +125,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const finalRole = isOwner ? 'admin' : fetchedRole;
 
       // Set user - this keeps session persistent
-      setUser({
+      const authUser = {
         id: userId,
         email: email,
         name: (profile as any)?.nome || profile?.full_name || email.split('@')[0],
         role: finalRole,
         avatar_url: undefined,
-      });
+      };
 
+      console.log('[Auth] Profile fetched successfully:', authUser.email, authUser.role);
+      setUser(authUser);
       setLoading(false);
     } catch (err) {
-      console.error("Profile fetch error:", err);
+      console.error("[Auth] Profile fetch error:", err);
 
       // Fallback: Keep user logged in with basic info from session
       const isOwner = email === 'xavier.davimot1@gmail.com';
-      setUser({
+      const fallbackUser = {
         id: userId,
         email: email,
         name: email.split('@')[0],
         role: isOwner ? 'admin' : 'bartender',
         avatar_url: undefined,
-      });
+      };
 
+      console.log('[Auth] Using fallback user data:', fallbackUser.email);
+      setUser(fallbackUser);
       setLoading(false);
     } finally {
       setIsFetchingProfile(false);
@@ -151,15 +168,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
 
-      // Wait a bit for onAuthStateChange to process
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Session is now handled by onAuthStateChange - no setTimeout needed
+      // The fetchProfile will be called automatically by the listener
     } catch (err) {
       setLoading(false);
       throw err;

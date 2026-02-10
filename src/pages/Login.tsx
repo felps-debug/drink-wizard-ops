@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,16 +20,26 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log('[Login] User is authenticated, redirecting to home...');
+      navigate("/", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
+      console.log('[Login] Attempting login for:', email);
       await signInWithEmail(email, password);
-      navigate("/");
+      // Don't navigate here - let useEffect handle it when user is set
+      console.log('[Login] Login request completed, waiting for auth state...');
     } catch (err: any) {
+      console.error('[Login] Login failed:', err);
       setError(err.message || "Erro ao fazer login");
-    } finally {
       setLoading(false);
     }
   };
