@@ -27,62 +27,51 @@ export function AutomationCard({
   const triggerLabel = TRIGGER_LABELS[automation.trigger_event] ||
     automation.trigger_event
       .replace(/_/g, ' ')
-      .split(' ')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ')
       .toUpperCase();
 
   const message = automation.action_config?.message || '';
 
   return (
-    <Card className="rounded-none border-2 border-white/10 bg-black/40 hover:border-primary/50 transition-all duration-200 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)]">
-      <CardHeader className="flex flex-row items-start justify-between pb-3 border-b border-white/5">
-        <div className="space-y-2 flex-1">
-          <CardTitle className="font-display text-xl font-black uppercase text-primary">
-            {automation.name}
-          </CardTitle>
-          <CardDescription className="font-mono text-[11px] font-bold uppercase text-secondary">
-            Gatilho: {triggerLabel}
-          </CardDescription>
-          {automation.trigger_count ? (
-            <p className="font-mono text-[10px] text-muted-foreground">
-              Disparada {automation.trigger_count}x
-              {automation.last_triggered_at && (
-                <>
-                  {' '}
-                  - Última: {new Date(automation.last_triggered_at).toLocaleDateString('pt-BR')}
-                </>
-              )}
-            </p>
-          ) : null}
+    <div className={`group relative p-4 transition-all duration-300 border-l-2 ${automation.active ? 'border-primary bg-primary/5' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
+      {/* Header / Status Line */}
+      <div className="flex items-start justify-between mb-4 font-mono">
+        <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wide">
+                <span className={automation.active ? "text-primary animate-pulse" : "text-muted-foreground"}>
+                    ● {automation.active ? "RUNNING" : "STOPPED"}
+                </span>
+                <span className="text-muted-foreground/30">|</span>
+                <span className="text-foreground font-bold">{automation.name}</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground flex gap-2">
+                <span>TRIGGER: {triggerLabel}</span>
+                {automation.trigger_count > 0 && <span>(COUNT: {automation.trigger_count})</span>}
+            </div>
         </div>
-        <div className="flex items-center gap-3 ml-4">
-          <Switch
-            checked={automation.active}
-            onCheckedChange={onToggle}
-            className="cursor-pointer"
-            aria-label={`Ativar/Desativar automação ${automation.name}`}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDelete}
-            className="text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-none cursor-pointer transition-colors duration-200"
-            title="Deletar automação"
-            aria-label={`Deletar automação ${automation.name}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+
+        <div className="flex items-center gap-4">
+            <Switch
+                checked={automation.active}
+                onCheckedChange={onToggle}
+                className="data-[state=checked]:bg-primary"
+            />
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={onDelete}
+                className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-transparent -mr-2"
+            >
+                <Trash2 className="h-4 w-4" />
+            </Button>
         </div>
-      </CardHeader>
-      <CardContent className="pt-3">
-        <div className="flex gap-3 rounded-none border border-white/5 bg-white/5 p-3">
-          <BellRing className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden="true" />
-          <p className="font-mono text-xs italic leading-relaxed text-muted-foreground break-words">
-            "{message}"
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Action / Message Block */}
+      <div className="font-mono text-xs border border-white/10 p-3 bg-black/50 text-muted-foreground group-hover:text-foreground transition-colors relative overflow-hidden">
+        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary/20" />
+        <span className="text-primary/50 mr-2">$</span>
+        sendMessage("{message}")
+      </div>
+    </div>
   );
 }
