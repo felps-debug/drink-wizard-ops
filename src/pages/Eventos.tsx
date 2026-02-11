@@ -77,8 +77,8 @@ export default function Eventos() {
               size="sm"
               onClick={() => setFilter(s.value)}
               className={`shrink-0 border-2 font-bold uppercase tracking-wider ${filter === s.value
-                  ? "bg-primary text-white border-primary"
-                  : "bg-transparent text-muted-foreground border-white/20 hover:border-primary hover:text-white"
+                ? "bg-primary text-white border-primary"
+                : "bg-transparent text-muted-foreground border-white/20 hover:border-primary hover:text-white"
                 }`}
             >
               {s.label}

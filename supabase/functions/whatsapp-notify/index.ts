@@ -137,8 +137,11 @@ serve(async (req) => {
     console.log(`[WhatsApp] Using UAZapi URL: ${UAZAPI_URL}`);
 
     // Call UAZapi endpoint
+    const url = `${UAZAPI_URL.replace(/\/$/, "")}/send/text`;
+    console.log(`[WhatsApp] Calling UAZAPI: ${url}`);
+
     const uazapiResponse = await fetch(
-      `${UAZAPI_URL}/send/text`,
+      url,
       {
         method: "POST",
         headers: {
@@ -152,7 +155,17 @@ serve(async (req) => {
       }
     );
 
-    const responseData = await uazapiResponse.json();
+    const responseText = await uazapiResponse.text();
+    console.log(`[WhatsApp] UAZAPI Response Status: ${uazapiResponse.status}`);
+    console.log(`[WhatsApp] UAZAPI Response Body: ${responseText}`);
+
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse JSON response from UAZAPI", e);
+      responseData = { message: responseText };
+    }
 
     if (uazapiResponse.ok) {
       const messageId = responseData.messageId || responseData.key?.id || "sent";

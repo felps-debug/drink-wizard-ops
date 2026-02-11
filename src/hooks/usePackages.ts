@@ -127,8 +127,9 @@ export const usePackages = () => {
                 if (itemsError) throw itemsError;
             }
         },
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['magodosdrinks_packages'] });
+            queryClient.invalidateQueries({ queryKey: ['package_items', variables.id] });
             toast.success("PACOTE ATUALIZADO!");
         },
         onError: (error: any) => {

@@ -50,13 +50,13 @@ export function useAllocations(eventId?: string) {
             // 1. Insert allocation
             const { data, error } = await supabase
                 .from('magodosdrinks_allocations')
-                .insert({
+                .upsert({
                     event_id: eventId,
                     staff_id: staffId,
                     daily_rate: dailyRate,
                     status: 'confirmado',
                     whatsapp_sent: false
-                })
+                }, { onConflict: 'event_id, staff_id' })
                 .select(`
                     *,
                     staff:magodosdrinks_staff(id, name, phone, role)
@@ -165,9 +165,9 @@ export function useAllocations(eventId?: string) {
 
             return result;
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['magodosdrinks_allocations', eventId] });
-            toast.success('Confirmado e WhatsApp enviado! 📱');
+            toast.success(`Confirmado! WhatsApp enviado para ${variables.staffPhone} 📱`);
         },
         onError: (err: any) => {
             toast.error('Erro: ' + err.message);

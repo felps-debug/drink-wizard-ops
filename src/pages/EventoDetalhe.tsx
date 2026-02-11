@@ -11,7 +11,7 @@ import {
   getStatusLabel,
 } from "@/lib/mock-data";
 import { useAuth } from "@/context/AuthContext";
-import { useEvent } from "@/hooks/useEvents";
+import { useEvent, useEvents } from "@/hooks/useEvents";
 import { OperationalCosts } from "@/components/events/OperationalCosts";
 import { EventAssignments } from "@/components/events/EventAssignments";
 
@@ -33,7 +33,8 @@ export default function EventoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { event: evento, checklists, isLoading, updateEventStatus } = useEvent(id);
+  const { events: _events, updateEventStatus } = useEvents(); // Get mutation from list hook
+  const { event: evento, checklists, isLoading } = useEvent(id);
 
   const entryChecklist = checklists.find(c => c.type === 'entrada');
   const exitChecklist = checklists.find(c => c.type === 'saida');
@@ -142,8 +143,8 @@ export default function EventoDetalhe() {
                   <div className={`flex flex-col items-center gap-1 min-w-[60px] ${isCompleted ? 'text-green-400' : isCurrent ? 'text-primary' : 'text-muted-foreground/40'
                     }`}>
                     <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${isCompleted ? 'border-green-400 bg-green-400/20' :
-                        isCurrent ? 'border-primary bg-primary/20 animate-pulse' :
-                          'border-muted-foreground/20 bg-muted/20'
+                      isCurrent ? 'border-primary bg-primary/20 animate-pulse' :
+                        'border-muted-foreground/20 bg-muted/20'
                       }`}>
                       {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
                     </div>

@@ -120,7 +120,7 @@ export function EventAssignments({ eventId, eventName, eventDate, eventLocation 
                                                 {allocation.status?.toUpperCase() || 'PENDENTE'}
                                             </span>
                                             {allocation.staff?.phone ? (
-                                                <span className="text-emerald-500 flex items-center gap-1">
+                                                <span className="text-emerald-500 flex items-center gap-1" title={allocation.staff?.phone}>
                                                     • <Check className={`w-3 h-3 ${allocation.whatsapp_sent ? 'text-primary' : ''}`} />
                                                     {allocation.whatsapp_sent ? 'Notificado' : 'WhatsApp'}
                                                 </span>

@@ -13,7 +13,7 @@ export const useEvents = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
