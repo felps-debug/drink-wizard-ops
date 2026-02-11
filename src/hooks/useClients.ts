@@ -89,7 +89,25 @@ export function useClients() {
         isLoading,
         addClient,
         updateClient,
-        mutateAsync: deleteClient.mutateAsync, // Export directly or use the object
-        deleteClient // Export correctly
+        mutateAsync: deleteClient.mutateAsync,
+        deleteClient
     };
 }
+
+export const useClient = (id?: string) => {
+    return useQuery({
+        queryKey: ['clients', id],
+        queryFn: async () => {
+            if (!id) return null;
+            const { data, error } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            return data as Client;
+        },
+        enabled: !!id
+    });
+};

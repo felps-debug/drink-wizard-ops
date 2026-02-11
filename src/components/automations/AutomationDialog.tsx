@@ -48,7 +48,7 @@ export function AutomationDialog({ open, onOpenChange }: AutomationDialogProps) 
         className="max-w-xl rounded-none border-2 border-white/20 bg-zinc-950 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
         onEscapeKeyDown={() => onOpenChange(false)}
       >
-        <DialogHeader>
+        <DialogHeader className="pr-10">
           <DialogTitle className="font-display text-2xl font-black uppercase text-primary">
             Nova Automação
           </DialogTitle>

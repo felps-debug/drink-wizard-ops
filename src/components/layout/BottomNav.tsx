@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Home, Calendar, Package, Users, BarChart3, Settings, Wine, User, Building2 } from "lucide-react";
+import { Home, Calendar, Package, Users, BarChart3, Settings, Wine, User, Building2, Bot } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export function BottomNav() {
@@ -53,6 +53,12 @@ export function BottomNav() {
       roles: ['admin']
     },
     {
+      icon: Bot,
+      label: "Automações",
+      path: "/automacoes",
+      roles: ['admin']
+    },
+    {
       icon: User,
       label: "Perfil",
       path: "/profile",
@@ -74,8 +80,8 @@ export function BottomNav() {
                 key={item.path}
                 to={item.path}
                 className={`flex flex-col items-center gap-1 transition-all ${active
-                    ? "text-primary scale-110"
-                    : "text-muted-foreground hover:text-primary/70"
+                  ? "text-primary scale-110"
+                  : "text-muted-foreground hover:text-primary/70"
                   }`}
               >
                 <div className={`p-1.5 rounded-lg transition-colors ${active ? "bg-primary/20" : ""}`}>

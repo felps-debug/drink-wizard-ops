@@ -22,7 +22,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
+import { useNavigate } from "react-router-dom";
+
 export default function Pacotes() {
+    const navigate = useNavigate();
     const { packages, isLoading, createPackage } = usePackages();
     const { insumos } = useInventory();
     const [name, setName] = useState("");
@@ -150,7 +153,11 @@ export default function Pacotes() {
                             <CardContent>
                                 <p className="font-mono text-xs uppercase text-muted-foreground mb-4">{pkg.description || "Sem descrição"}</p>
                                 <div className="flex gap-2 mt-4">
-                                    <Button variant="outline" className="flex-1 rounded-none border-white/20 font-bold uppercase text-[10px] h-8">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 rounded-none border-white/20 font-bold uppercase text-[10px] h-8"
+                                        onClick={() => navigate(`/pacotes/${pkg.id}`)}
+                                    >
                                         Ver Itens
                                     </Button>
                                 </div>

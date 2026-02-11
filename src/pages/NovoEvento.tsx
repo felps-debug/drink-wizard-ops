@@ -25,6 +25,7 @@ export default function NovoEvento() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Form State
+  const [eventName, setEventName] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [date, setDate] = useState("");
@@ -52,14 +53,7 @@ export default function NovoEvento() {
   };
 
   const handleCreateClient = async (data: any) => {
-    // Create client and select it
-    // Note: addClientMutation logic in useClients should return data ideally, 
-    // but standard mutation might not return the new ID easily if not wired up so.
-    // However, invalidateQueries will refresh the list.
-    // We will rely on the user selecting the new client after creation for now, 
-    // or we can try to find it.
     await addClientMutation.mutateAsync(data);
-    // We might need to handle auto-selection here if needed, but let's keep it simple.
   };
 
   const { packages = [], isLoading: loadingPackages } = usePackages();
@@ -80,6 +74,7 @@ export default function NovoEvento() {
       const dateTime = new Date(`${date}T${time}:00`).toISOString();
 
       await addEvent.mutateAsync({
+        name: eventName || `Evento de ${clientName}`,
         clientName,
         clientPhone,
         date: dateTime,
@@ -113,6 +108,25 @@ export default function NovoEvento() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Event Details */}
+          <section className="space-y-4">
+            <h2 className="font-display text-xl font-bold uppercase text-primary border-l-4 border-primary pl-3">
+              Dados do Evento
+            </h2>
+            <div className="space-y-2">
+              <Label htmlFor="eventName" className="font-mono text-xs uppercase">
+                Nome do Evento (Opcional)
+              </Label>
+              <Input
+                id="eventName"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+                className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
+                placeholder="EX: CASAMENTO DA JULIA, FORMATURA..."
+              />
+            </div>
+          </section>
+
           {/* Client Details */}
           <section className="space-y-4">
             <h2 className="font-display text-xl font-bold uppercase text-primary border-l-4 border-primary pl-3">
@@ -167,12 +181,6 @@ export default function NovoEvento() {
                 />
               </div>
             </div>
-
-            <ClientDialog
-              open={isClientDialogOpen}
-              onOpenChange={setIsClientDialogOpen}
-              onSubmit={handleCreateClient}
-            />
           </section>
 
           {/* Logistics */}
@@ -302,6 +310,12 @@ export default function NovoEvento() {
             </Button>
           </div>
         </form>
+
+        <ClientDialog
+          open={isClientDialogOpen}
+          onOpenChange={setIsClientDialogOpen}
+          onSubmit={handleCreateClient}
+        />
       </div>
     </AppLayout>
   );

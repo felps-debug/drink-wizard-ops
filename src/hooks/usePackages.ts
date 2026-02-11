@@ -93,10 +93,72 @@ export const usePackages = () => {
         }
     });
 
+    const updatePackage = useMutation({
+        mutationFn: async ({ id, name, description, items }: { id: string, name: string, description: string, items: { ingredient_id: string, quantity: number }[] }) => {
+            // 1. Update Package details
+            const { error: pkgError } = await supabase
+                .from('magodosdrinks_packages')
+                .update({ name, description })
+                .eq('id', id);
+
+            if (pkgError) throw pkgError;
+
+            // 2. Update Items (Delete all and re-create)
+            // First, delete existing items
+            const { error: deleteError } = await supabase
+                .from('magodosdrinks_package_items')
+                .delete()
+                .eq('package_id', id);
+
+            if (deleteError) throw deleteError;
+
+            // Then insert new ones
+            if (items.length > 0) {
+                const packageItems = items.map(item => ({
+                    package_id: id,
+                    ingredient_id: item.ingredient_id,
+                    quantity: item.quantity
+                }));
+
+                const { error: itemsError } = await supabase
+                    .from('magodosdrinks_package_items')
+                    .insert(packageItems);
+
+                if (itemsError) throw itemsError;
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['magodosdrinks_packages'] });
+            toast.success("PACOTE ATUALIZADO!");
+        },
+        onError: (error: any) => {
+            toast.error("ERRO AO ATUALIZAR: " + error.message);
+        }
+    });
+
+    const deletePackage = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('magodosdrinks_packages')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['magodosdrinks_packages'] });
+            toast.success("PACOTE REMOVIDO!");
+        },
+        onError: (error: any) => {
+            toast.error("ERRO AO REMOVER: " + error.message);
+        }
+    });
+
     return {
         packages,
         isLoading,
         getPackageItems,
-        createPackage
+        createPackage,
+        updatePackage,
+        deletePackage
     };
 };

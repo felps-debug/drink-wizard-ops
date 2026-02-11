@@ -10,7 +10,10 @@ import { ClientDialog } from "@/components/clients/ClientDialog";
 import { Client } from "@/lib/mock-data";
 import { useAuth } from "@/context/AuthContext";
 
+import { useNavigate } from "react-router-dom";
+
 export default function Clientes() {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.role === 'chefe_bar';
     const { clients, isLoading, addClient, updateClient } = useClients();
@@ -26,12 +29,6 @@ export default function Clientes() {
 
     const handleAddNew = () => {
         setSelectedClient(undefined);
-        setIsDialogOpen(true);
-    };
-
-    const handleEdit = (client: Client) => {
-        if (!isAdmin) return;
-        setSelectedClient(client);
         setIsDialogOpen(true);
     };
 
@@ -75,7 +72,7 @@ export default function Clientes() {
                         <Card
                             key={client.id}
                             className="group rounded-none border border-white/10 bg-black/40 hover:border-primary/50 cursor-pointer transition-all"
-                            onClick={() => handleEdit(client)}
+                            onClick={() => navigate(`/clientes/${client.id}`)}
                         >
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex justify-between items-start">

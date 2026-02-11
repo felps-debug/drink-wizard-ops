@@ -19,6 +19,7 @@ export const useEvents = () => {
 
       return data.map((event: any) => ({
         id: event.id,
+        name: event.name || `Evento de ${event.client_name}`, // Fallback
         client_id: event.client_id,
         clientName: event.client_name,
         clientPhone: event.client_phone || '',
@@ -58,6 +59,7 @@ export const useEvents = () => {
       const { data, error } = await supabase
         .from('events')
         .insert([{
+          name: newEvent.name,
           client_id: newEvent.client_id,
           client_name: newEvent.clientName,
           client_phone: newEvent.clientPhone,
@@ -89,6 +91,7 @@ export const useEvents = () => {
       const { error } = await supabase
         .from('events')
         .update({
+          name: event.name,
           client_id: event.client_id,
           client_name: event.clientName,
           client_phone: event.clientPhone,
@@ -191,6 +194,7 @@ export const useEvent = (id?: string) => {
 
       return {
         id: data.id,
+        name: data.name || `Evento de ${data.client_name}`,
         clientName: data.client_name,
         clientPhone: data.client_phone || '',
         location: data.location,

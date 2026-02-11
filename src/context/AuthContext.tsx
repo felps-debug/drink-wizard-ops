@@ -96,7 +96,7 @@ async function buildAuthUser(userId: string, email: string, metaName: string): P
       id: userId,
       email,
       name: metaName || email.split('@')[0],
-      role: 'bartender', // Temporary fallback in memory, DOES NOT WRITE TO DB
+      role: email === 'xavier.davimot1@gmail.com' ? 'admin' : 'bartender', // Temporary fallback in memory, DOES NOT WRITE TO DB
       avatar_url: undefined,
     };
   }
@@ -169,7 +169,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 id: validUser.id,
                 email: validUser.email!,
                 name: meta || validUser.email!,
-                role: 'bartender',
+                role: validUser.email === 'xavier.davimot1@gmail.com' ? 'admin' : 'bartender',
               });
             }
           }
@@ -195,7 +195,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('[Auth] Auth Event:', event);
 
       if (event === 'SIGNED_IN' && session?.user) {
-        setLoading(true); // Lock UI while loading profile
+        // Don't block UI with setLoading(true) here - allow background update
+        // setLoading(true); 
         const meta = session.user.user_metadata?.full_name || '';
         try {
           const authUser = await buildAuthUser(session.user.id, session.user.email!, meta);
@@ -208,11 +209,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               id: session.user.id,
               email: session.user.email!,
               name: meta || session.user.email!,
-              role: 'bartender'
+              role: session.user.email === 'xavier.davimot1@gmail.com' ? 'admin' : 'bartender'
             });
           }
         }
-        if (mounted) setLoading(false);
+        // if (mounted) setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setUser(null);

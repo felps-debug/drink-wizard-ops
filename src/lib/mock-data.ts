@@ -22,6 +22,7 @@ export interface Insumo {
 
 export interface Evento {
   id: string;
+  name?: string;
   client_id?: string;
   clientName: string;
   clientPhone: string;

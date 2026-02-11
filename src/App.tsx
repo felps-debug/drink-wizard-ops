@@ -19,7 +19,9 @@ import ChecklistSaida from "./pages/ChecklistSaida";
 import Profile from "./pages/Profile";
 import Escalas from "./pages/Escalas";
 import Pacotes from "./pages/Pacotes";
+import PackageDetails from "./pages/PackageDetails";
 import Clientes from "./pages/Clientes";
+import ClientDetails from "./pages/ClientDetails";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -48,22 +50,11 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/auth-reset" element={<AuthReset />} />
 
-              {/* Protected Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/eventos" element={<Eventos />} />
-                <Route path="/eventos/:id" element={<EventoDetalhe />} />
-                <Route path="/eventos/:id/checklist-entrada" element={<ChecklistEntrada />} />
-                <Route path="/eventos/:id/checklist-saida" element={<ChecklistSaida />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/escalas" element={<Escalas />} />
-              </Route>
-
-
-              {/* Admin & Chefe de Bar Routes */}
+              {/* Admin & Chefe de Bar Routes - Defined FIRST to match /eventos/novo before /eventos/:id */}
               <Route element={<ProtectedRoute allowedRoles={['admin', 'chefe_bar']} />}>
                 <Route path="/insumos" element={<Insumos />} />
                 <Route path="/clientes" element={<Clientes />} />
+                <Route path="/clientes/:id" element={<ClientDetails />} />
                 <Route path="/eventos/novo" element={<NovoEvento />} />
               </Route>
 
@@ -72,6 +63,19 @@ const App = () => (
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/automacoes" element={<Automacoes />} />
                 <Route path="/pacotes" element={<Pacotes />} />
+                <Route path="/pacotes/:id" element={<PackageDetails />} />
+              </Route>
+
+              {/* Protected Routes - Generic */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/eventos" element={<Eventos />} />
+                {/* Moved :id route down so it doesn't shadow 'novo' */}
+                <Route path="/eventos/:id" element={<EventoDetalhe />} />
+                <Route path="/eventos/:id/checklist-entrada" element={<ChecklistEntrada />} />
+                <Route path="/eventos/:id/checklist-saida" element={<ChecklistSaida />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/escalas" element={<Escalas />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

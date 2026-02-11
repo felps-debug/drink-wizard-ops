@@ -56,6 +56,7 @@ function substituteVariables(
   result = result.replace(/{local}/g, data.event_location || "");
   result = result.replace(/{location}/g, data.event_location || "");
   result = result.replace(/{event_name}/g, data.event_name || "");
+  result = result.replace(/{nome_evento}/g, data.event_name || ""); // Support Portuguese placeholder
 
   // Staff variables
   result = result.replace(/{nome}/g, data.staff_name || "");
@@ -258,7 +259,7 @@ serve(async (req) => {
           console.log(`[Automation] Fetching event details for: ${record.event_id}`);
           const { data: eventData, error: eventError } = await supabase
             .from("events")
-            .select("client_name, client_phone, date, location")
+            .select("name, client_name, client_phone, date, location")
             .eq("id", record.event_id)
             .single();
 
@@ -270,7 +271,9 @@ serve(async (req) => {
               client_name: eventData.client_name,
               client_phone: eventData.client_phone,
               event_date: eventData.date,
-              event_location: eventData.location
+              event_location: eventData.location,
+              event_name: eventData.name, // Map new name field
+              nome_evento: eventData.name // Portuguese alias
             };
           }
         }
