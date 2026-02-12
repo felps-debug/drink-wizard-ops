@@ -98,7 +98,7 @@ export default function Eventos() {
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <h3 className="truncate font-display text-xl font-bold uppercase leading-none text-white group-hover:text-primary transition-colors">
-                            {event.clientName}
+                            {event.name}
                           </h3>
                           <Badge className={`rounded-none border px-2 py-0.5 font-mono text-[10px] uppercase font-bold ${getStatusColor(event.status)}`}>
                             {getStatusLabel(event.status)}

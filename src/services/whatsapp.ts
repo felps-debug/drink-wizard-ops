@@ -9,25 +9,43 @@ interface SendMessageResponse {
 export const whatsappService = {
     async sendMessage(phone: string, text: string): Promise<SendMessageResponse> {
         try {
-            // Call Supabase Edge Function instead of direct Uazapi call
-            const { data, error } = await supabase.functions.invoke('whatsapp-notify', {
-                body: {
+            // Direct fetch to bypass potential supabase-js client issues
+            const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-notify`;
+            const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+            console.log('[WhatsApp] Sending to:', functionUrl);
+
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${anonKey}`
+                },
+                body: JSON.stringify({
                     phone,
                     message: text
-                }
+                })
             });
 
-            if (error) {
-                console.error('Edge Function Error:', error);
-                throw new Error(error.message || 'Failed to trigger Edge Function');
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[WhatsApp] Fetch Error:', response.status, errorText);
+                throw new Error(`HTTP Error ${response.status}: ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.status === 'error') {
+                throw new Error(data.message || 'Unknown error from Edge Function');
             }
 
             return {
                 status: 'success',
-                messageId: data.key?.id || 'sent'
+                messageId: data.messageId || 'sent'
             };
         } catch (error: any) {
             console.error('WhatsApp Service Error:', error);
+            // Return specific error message to UI
             return { status: 'error', error: error.message };
         }
     }

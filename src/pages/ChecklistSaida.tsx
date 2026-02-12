@@ -101,7 +101,7 @@ export default function ChecklistSaida() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="truncate font-display text-lg uppercase font-bold">{evento.clientName}</h1>
+            <h1 className="truncate font-display text-lg uppercase font-bold">{evento.name}</h1>
             <p className="text-[10px] font-mono uppercase text-muted-foreground">Checklist de Saída (Sobras)</p>
           </div>
         </div>

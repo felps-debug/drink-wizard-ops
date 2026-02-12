@@ -7,7 +7,8 @@ import { BellRing, Trash2 } from 'lucide-react';
 interface AutomationCardProps {
   automation: AutomationTrigger;
   onToggle: (active: boolean) => void;
-  onDelete: () => void;
+  onDelete: (e: React.MouseEvent) => void;
+  onClick?: () => void;
 }
 
 const TRIGGER_LABELS: Record<string, string> = {
@@ -16,13 +17,16 @@ const TRIGGER_LABELS: Record<string, string> = {
   event_created: 'NOVO EVENTO AGENDADO',
   'entrada_checklist': 'ENTRADA CHECKLIST CONCLUÍDO',
   'saida_checklist': 'SAÍDA CHECKLIST CONCLUÍDO',
-  'evento_agendado': 'NOVO EVENTO AGENDADO'
+  'evento_agendado': 'NOVO EVENTO AGENDADO',
+  'status_entregue': 'EVENTO ENTREGUE (LOCAL)',
+  'status_montagem': 'MONTAGEM FINALIZADA'
 };
 
 export function AutomationCard({
   automation,
   onToggle,
-  onDelete
+  onDelete,
+  onClick
 }: AutomationCardProps) {
   const triggerLabel = TRIGGER_LABELS[automation.trigger_event] ||
     automation.trigger_event
@@ -35,7 +39,10 @@ export function AutomationCard({
   const message = automation.action_config?.message || '';
 
   return (
-    <Card className="rounded-none border-2 border-white/10 bg-black/40 hover:border-primary/50 transition-all duration-200 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)]">
+    <Card
+      className="rounded-none border-2 border-white/10 bg-black/40 hover:border-primary/50 transition-all duration-200 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)]"
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-start justify-between pb-3 border-b border-white/5">
         <div className="space-y-2 flex-1">
           <CardTitle className="font-display text-xl font-black uppercase text-primary">
@@ -56,7 +63,7 @@ export function AutomationCard({
             </p>
           ) : null}
         </div>
-        <div className="flex items-center gap-3 ml-4">
+        <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
           <Switch
             checked={automation.active}
             onCheckedChange={onToggle}

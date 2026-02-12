@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAllocations } from '@/hooks/useAllocations';
+import { useAllocations, useBusyStaff } from '@/hooks/useAllocations';
 import { useStaff, getStaffRoleLabel } from '@/hooks/useStaff';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,16 @@ interface EventAssignmentsProps {
 export function EventAssignments({ eventId, eventName, eventDate, eventLocation }: EventAssignmentsProps) {
     const { allocations, isLoading: allocLoading, allocateStaff, confirmAndNotify, removeAllocation } = useAllocations(eventId);
     const { staff, isLoading: staffLoading } = useStaff();
+
+    // NEW: Fetch busy staff for this date
+    const { data: busyStaffIds = [] } = useBusyStaff(eventDate);
+
     const [selectedStaffId, setSelectedStaffId] = useState('');
     const [rate, setRate] = useState('150'); // Default daily rate
 
+    // Filter available staff: Not in this event AND not busy elsewhere AND active
     const availableStaff = staff.filter(
-        (s) => !allocations.some((a) => a.staff_id === s.id)
+        (s) => !allocations.some((a) => a.staff_id === s.id) && !busyStaffIds.includes(s.id) && s.status !== 'pending'
     );
 
     const handleAdd = () => {
@@ -39,26 +44,33 @@ export function EventAssignments({ eventId, eventName, eventDate, eventLocation 
         <Card className="rounded-none border-2 border-white/10 bg-black/40">
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display text-xl uppercase tracking-tight text-white">Escala Operacional</CardTitle>
-                <Badge variant="outline" className="font-mono text-[10px] uppercase">
-                    {allocations.length} Integrantes
-                </Badge>
+                <div className="flex gap-2">
+                    <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                        {allocations.length} Integrantes
+                    </Badge>
+                    {busyStaffIds.length > 0 && (
+                        <Badge variant="secondary" className="font-mono text-[10px] uppercase text-warning">
+                            {busyStaffIds.length} Indisponíveis
+                        </Badge>
+                    )}
+                </div>
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* ADD FORM */}
                 <div className="flex gap-2 items-end border-b pb-6 border-white/10">
                     <div className="flex-1 space-y-2">
-                        <span className="text-xs font-bold uppercase text-muted-foreground">Profissional</span>
+                        <span className="text-xs font-bold uppercase text-muted-foreground">Profissional Disponível</span>
                         <Select value={selectedStaffId} onValueChange={(val) => {
                             setSelectedStaffId(val);
                             const selected = staff.find(s => s.id === val);
                             if (selected?.daily_rate) setRate(selected.daily_rate.toString());
                         }}>
                             <SelectTrigger className="rounded-none bg-black/50 border-white/20">
-                                <SelectValue placeholder={staff.length === 0 ? "CADASTRE PROFISSIONAIS EM 'EQUIPE'..." : "SELECIONE..."} />
+                                <SelectValue placeholder={staff.length === 0 ? "CADASTRE PROFISSIONAIS..." : "SELECIONE..."} />
                             </SelectTrigger>
                             <SelectContent>
                                 {availableStaff.length === 0 && staff.length > 0 && (
-                                    <div className="p-2 text-xs text-muted-foreground uppercase font-mono">Todos já escalados</div>
+                                    <div className="p-2 text-xs text-muted-foreground uppercase font-mono">Todos ocupados hoje</div>
                                 )}
                                 {staff.length === 0 && (
                                     <div className="p-2 text-xs text-warning uppercase font-mono">Nenhum profissional no banco</div>
@@ -133,7 +145,7 @@ export function EventAssignments({ eventId, eventName, eventDate, eventLocation 
 
                                 <div className="flex items-center gap-2">
                                     {/* NOTIFY BUTTON */}
-                                    {allocation.status !== 'confirmado' && (
+                                    {(!allocation.whatsapp_sent || allocation.status !== 'confirmado') && (
                                         <Button
                                             size="sm"
                                             variant="outline"
@@ -143,13 +155,17 @@ export function EventAssignments({ eventId, eventName, eventDate, eventLocation 
                                                 allocationId: allocation.id,
                                                 staffName: allocation.staff?.name || '',
                                                 staffPhone: allocation.staff?.phone || '',
+                                                staffRole: allocation.staff?.role || '',
                                                 eventName,
                                                 eventDate,
                                                 eventLocation: eventLocation || ''
                                             })}
                                         >
                                             <Send className="w-3 h-3 mr-2" />
-                                            {confirmAndNotify.isPending ? "..." : "CONVOCAR"}
+                                            {confirmAndNotify.isPending ? "..." : (
+                                                allocation.status === 'confirmado' ? "REENVIAR" :
+                                                    allocation.staff?.role === 'bartender' ? "CONVOCAR" : "CONFIRMAR"
+                                            )}
                                         </Button>
                                     )}
 

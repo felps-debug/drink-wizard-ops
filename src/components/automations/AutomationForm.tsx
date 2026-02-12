@@ -18,6 +18,8 @@ import {
 } from '@/hooks/useVariableSubstitution';
 import { Copy, AlertCircle, CheckCircle } from 'lucide-react';
 
+import { AutomationTrigger } from '@/hooks/useAutomations';
+
 interface AutomationFormProps {
   onSubmit: (data: {
     name: string;
@@ -25,19 +27,31 @@ interface AutomationFormProps {
     message: string;
   }) => void;
   isLoading?: boolean;
+  initialData?: AutomationTrigger;
 }
 
 const TRIGGER_EVENTS = [
   { value: 'checklist_entrada', label: 'Checklist Entrada Concluído' },
   { value: 'checklist_saida', label: 'Checklist Saída Concluído' },
   { value: 'event_created', label: 'Novo Evento Agendado' },
+  { value: 'status_entregue', label: 'Status: Evento Entregue' },
+  { value: 'status_montagem', label: 'Status: Montagem Finalizada' },
 ];
 
-export function AutomationForm({ onSubmit, isLoading = false }: AutomationFormProps) {
-  const [name, setName] = useState('');
-  const [triggerEvent, setTriggerEvent] = useState('');
-  const [message, setMessage] = useState('');
+export function AutomationForm({ onSubmit, isLoading = false, initialData }: AutomationFormProps) {
+  const [name, setName] = useState(initialData?.name || '');
+  const [triggerEvent, setTriggerEvent] = useState(initialData?.trigger_event || '');
+  const [message, setMessage] = useState(initialData?.action_config?.message || '');
   const [showPreview, setShowPreview] = useState(false);
+
+  // Sync with initialData
+  useMemo(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setTriggerEvent(initialData.trigger_event);
+      setMessage(initialData.action_config?.message || '');
+    }
+  }, [initialData]);
 
   // Validate form fields
   const validation = useMemo(() => {
@@ -247,7 +261,7 @@ export function AutomationForm({ onSubmit, isLoading = false }: AutomationFormPr
         className="w-full h-12 rounded-none border-2 border-primary bg-primary font-mono text-sm font-bold uppercase text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[2px_2px_0px_0px_rgba(124,58,237,0.5)] transition-all duration-200 cursor-pointer"
         aria-label="Ativar automação"
       >
-        {isLoading ? 'SALVANDO...' : 'ATIVAR AUTOMAÇÃO'}
+        {isLoading ? 'SALVANDO...' : initialData ? 'ATUALIZAR AUTOMAÇÃO' : 'ATIVAR AUTOMAÇÃO'}
       </Button>
     </form>
   );

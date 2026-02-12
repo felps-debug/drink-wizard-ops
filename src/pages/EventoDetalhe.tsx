@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, MapPin, Phone, Calendar, DollarSign, CheckCircle2, Clock, Package, PackageCheck, MessageCircle, Wrench, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,80 @@ export default function EventoDetalhe() {
   const entryComplete = !!entryChecklist && entryChecklist.status === 'conferido';
   const exitComplete = !!exitChecklist && exitChecklist.status === 'conferido';
 
+  const handleManualNotification = async () => {
+    if (!evento) return;
+
+    let eventType = '';
+    let description = '';
+
+    // Determine notification type based on status/context
+    // Logic: If checklist is done, prioritize checklist notification
+    if (evento.status === 'em_curso' && entryComplete) {
+      eventType = 'entrada';
+      description = 'Checklist de Entrada';
+    } else if (evento.status === 'finalizado' && exitComplete) {
+      eventType = 'saida';
+      description = 'Checklist de Saída';
+    } else if (evento.status === 'entregue') {
+      eventType = 'entrega_confirmada';
+      description = 'Aviso de Entrega';
+    } else if (evento.status === 'montagem') {
+      eventType = 'montagem_finalizada';
+      description = 'Aviso de Montagem';
+    } else if (evento.status === 'agendado') {
+      eventType = 'event_created';
+      description = 'Confirmação de Agendamento';
+    } else {
+      // Fallback for current status
+      if (evento.status === 'em_curso') {
+        eventType = 'entrada';
+        description = 'Checklist de Entrada (Manual)';
+      } else {
+        toast.error("Nenhuma notificação recomendada para este estado.");
+        return;
+      }
+    }
+
+    const toastId = toast.loading(`Enviando: ${description}...`);
+
+    try {
+      const { data: results, error } = await supabase.functions.invoke('handle-automation', {
+        body: {
+          type: 'UPDATE', // Dummy action
+          table: 'manual_trigger', // Dummy table
+          event_type: eventType,
+          record: {
+            event_id: evento.id,
+            client_name: evento.clientName,
+            client_phone: evento.clientPhone,
+            event_date: evento.date,
+            event_location: evento.location,
+            event_name: evento.name,
+            status: 'completed',
+            type: eventType === 'entrada' || eventType === 'saida' ? eventType : undefined
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // check for internal errors
+      const hasSuccess = Array.isArray(results) && results.some((r: any) => r.status === 'success' || r.status === 'test');
+      const hasError = Array.isArray(results) && results.some((r: any) => r.status === 'error');
+
+      if (hasError && !hasSuccess) {
+        const reason = results[0]?.reason || "Erro desconhecido na automação";
+        throw new Error(reason);
+      }
+
+      toast.success("Notificação enviada com sucesso!", { id: toastId });
+    } catch (err) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : "Erro ao enviar notificação.";
+      toast.error(`Erro: ${msg}`, { id: toastId });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -80,16 +155,14 @@ export default function EventoDetalhe() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="truncate font-semibold">{evento.clientName}</h1>
+            <h1 className="truncate font-semibold">{evento.name}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
               className="hidden md:flex gap-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
-              onClick={() => {
-                toast.success("Enviando mensagem via Evolution API...");
-              }}
+              onClick={handleManualNotification}
             >
               <MessageCircle className="h-4 w-4" />
               Notificar Cliente
@@ -317,7 +390,7 @@ export default function EventoDetalhe() {
             <div>
               <h2 className="text-lg font-semibold mb-4">Escala e Custos Operacionais</h2>
               <div className="grid gap-6 md:grid-cols-2">
-                <EventAssignments eventId={id!} eventName={evento.clientName || 'Evento'} eventDate={formatDate(evento.date)} />
+                <EventAssignments eventId={id!} eventName={evento.name || 'Evento'} eventDate={formatDate(evento.date)} />
                 <OperationalCosts eventId={id!} />
               </div>
             </div>

@@ -154,9 +154,14 @@ export default function ChecklistEntrada() {
         items: items.filter(i => i.qtySent > 0 || i.qtyReceived > 0),
         status: 'conferido'
       });
+
+      // Delay navigation to allow user to see the success/error toast
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       navigate(`/eventos/${id}`);
     } catch (e) {
       console.error(e);
+      // Toast is already handled in mutation
     }
   };
 
@@ -250,7 +255,7 @@ export default function ChecklistEntrada() {
           <h2 className="font-display text-xl font-bold uppercase text-white mb-4">Equipe do Projeto</h2>
           <EventAssignments
             eventId={id!}
-            eventName={evento.clientName}
+            eventName={evento.name}
             eventDate={new Date(evento.date).toLocaleDateString()}
             eventLocation={evento.location}
           />

@@ -1,6 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { useAutomations } from '@/hooks/useAutomations';
+import { useAutomations, AutomationTrigger } from '@/hooks/useAutomations';
 import { AutomationDialog } from '@/components/automations/AutomationDialog';
 import { AutomationCard } from '@/components/automations/AutomationCard';
 import { Zap, Plus } from 'lucide-react';
@@ -9,6 +9,17 @@ import { useState } from 'react';
 export default function Automacoes() {
   const { automations, isLoading, toggleAutomation, deleteAutomation } = useAutomations();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedAutomation, setSelectedAutomation] = useState<AutomationTrigger | undefined>(undefined);
+
+  const handleEdit = (automation: AutomationTrigger) => {
+    setSelectedAutomation(automation);
+    setIsDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setSelectedAutomation(undefined);
+    setIsDialogOpen(true);
+  };
 
   return (
     <AppLayout title="Automações">
@@ -25,7 +36,7 @@ export default function Automacoes() {
           </div>
           <Button
             className="rounded-none border-2 border-primary bg-primary font-bold uppercase text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all duration-200 cursor-pointer"
-            onClick={() => setIsDialogOpen(true)}
+            onClick={handleCreate}
             aria-label="Criar novo gatilho de automação"
           >
             <Plus className="mr-2 h-4 w-4" /> Criar Gatilho
@@ -33,7 +44,11 @@ export default function Automacoes() {
         </div>
 
         {/* Create Dialog */}
-        <AutomationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+        <AutomationDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          initialData={selectedAutomation}
+        />
 
         {/* Automation Cards Grid */}
         <div className="grid gap-4">
@@ -43,6 +58,7 @@ export default function Automacoes() {
               automation={auto}
               onToggle={(active) => toggleAutomation.mutate({ id: auto.id, active })}
               onDelete={() => deleteAutomation.mutate(auto.id)}
+              onClick={() => handleEdit(auto)}
             />
           ))}
 

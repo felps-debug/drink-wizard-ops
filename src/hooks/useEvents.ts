@@ -138,21 +138,43 @@ export const useEvents = () => {
           .single();
 
         if (eventData) {
-          supabase.functions.invoke('handle-automation', {
-            body: {
-              type: 'UPDATE',
-              table: 'events',
-              event_type: triggerName,
-              record: {
-                event_id: eventId,
-                status: newStatus,
-                client_name: eventData.client_name,
-                client_phone: eventData.client_phone,
-                event_date: eventData.date,
-                event_location: eventData.location,
+          const toastId = toast.loading("Atualizando status e notificando...");
+
+          try {
+            const automationRes = await supabase.functions.invoke('handle-automation', {
+              body: {
+                type: 'UPDATE',
+                table: 'events',
+                event_type: triggerName,
+                record: {
+                  event_id: eventId,
+                  status: newStatus,
+                  client_name: eventData.client_name,
+                  client_phone: eventData.client_phone,
+                  event_date: eventData.date,
+                  event_location: eventData.location,
+                },
               },
-            },
-          }).catch((err) => console.error('[Automation] Trigger failed:', err));
+            });
+
+            const results = automationRes.data;
+            const hasSuccess = Array.isArray(results) && results.some((r: any) => r.status === 'success' || r.status === 'test');
+            const hasError = Array.isArray(results) && results.some((r: any) => r.status === 'error');
+
+            toast.dismiss(toastId);
+
+            if (automationRes.error || (hasError && !hasSuccess)) {
+              console.error('[Automation] Trigger failed:', automationRes.error || results);
+              const reason = Array.isArray(results) ? results.find((r: any) => r.status === 'error')?.reason : 'Erro desconhecido';
+              toast.error(`Status salvo, mas erro ao notificar: ${reason}`);
+            } else if (hasSuccess) {
+              toast.success("Status atualizado e cliente notificado!");
+            }
+          } catch (err) {
+            console.error('[Automation] Network error:', err);
+            toast.dismiss(toastId);
+            toast.error("Status salvo, mas falha na conexão da notificação");
+          }
         }
       }
     },
@@ -267,9 +289,12 @@ export const useEvent = (id?: string) => {
         if (error) throw error;
       }
 
+      console.log('useEvent: saveChecklist called', { type: data.type, status: data.status });
+
       // Auto-update event status when checklist is completed
       if (data.status === 'conferido') {
         const newStatus = data.type === 'entrada' ? 'em_curso' : 'finalizado';
+        console.log('useEvent: Updating event status to', newStatus);
 
         await supabase
           .from('events')
@@ -279,9 +304,11 @@ export const useEvent = (id?: string) => {
         // Fetch event data to fire automation trigger
         const { data: eventData } = await supabase
           .from('events')
-          .select('client_name, client_phone, date, location')
+          .select('client_name, client_phone, date, location, name, client_id')
           .eq('id', data.eventId)
           .single();
+
+        console.log('useEvent: Fetched event data for automation', eventData);
 
         if (eventData) {
           // Fire handle-automation edge function with checklist trigger
@@ -289,23 +316,98 @@ export const useEvent = (id?: string) => {
             ? 'checklist_entrada'
             : 'checklist_saida';
 
-          supabase.functions.invoke('handle-automation', {
-            body: {
-              type: 'UPDATE',
-              table: 'checklists',
-              event_type: data.type === 'entrada' ? 'entrada' : 'saida',
-              record: {
-                event_id: data.eventId,
-                type: data.type,
-                status: 'completed',
-                client_name: eventData.client_name,
-                client_phone: eventData.client_phone,
-                event_date: eventData.date,
-                event_location: eventData.location,
+          const targetPhone = eventData.client_phone || "(Sem telefone no evento)";
+
+          // DEBUG: Persistent toast
+          const toastId = toast.loading(`Iniciando notificação para: ${targetPhone}`, {
+            duration: Infinity, // User must dismiss
+            action: {
+              label: 'Fechar',
+              onClick: () => console.log('Toast dismissed')
+            }
+          });
+
+          try {
+            console.log('useEvent: Invoking handle-automation (Awaiting)', {
+              triggerEvent,
+              client_phone: eventData.client_phone,
+              client_id: eventData.client_id
+            });
+
+            // Double check validation
+            if (!eventData.client_phone && !eventData.client_id) {
+              throw new Error("ALERTA CRÍTICO: Evento sem telefone e sem Vínculo de Cliente!");
+            }
+
+            const automationRes = await supabase.functions.invoke('handle-automation', {
+              body: {
+                type: 'UPDATE',
+                table: 'checklists',
+                event_type: data.type === 'entrada' ? 'entrada' : 'saida',
+                record: {
+                  event_id: data.eventId,
+                  type: data.type,
+                  status: 'completed',
+                  client_name: eventData.client_name,
+                  client_phone: eventData.client_phone,
+                  client_id: eventData.client_id,
+                  event_date: eventData.date,
+                  event_location: eventData.location,
+                  event_name: eventData.name,
+                },
               },
-            },
-          }).catch((err) => console.error('[Automation] Trigger failed:', err));
+            });
+
+            const results = automationRes.data;
+            const hasSuccess = Array.isArray(results) && results.some((r: any) => r.status === 'success' || r.status === 'test');
+            const hasError = Array.isArray(results) && results.some((r: any) => r.status === 'error');
+
+            toast.dismiss(toastId);
+
+            if (automationRes.error || (hasError && !hasSuccess)) {
+              console.error('[Automation] Supabase invoke error:', automationRes.error || results);
+
+              let reason = 'Falha desconhecida';
+
+              // Case 1: Supabase/Network Error
+              if (automationRes.error) {
+                reason = automationRes.error.message || JSON.stringify(automationRes.error);
+              }
+              // Case 2: Logic Error in Results Array
+              else if (Array.isArray(results)) {
+                const errorItem = results.find((r: any) => r.status === 'error');
+                reason = errorItem?.reason || errorItem?.message || JSON.stringify(errorItem);
+              }
+              // Case 3: Result is an object (500 response handled manually)
+              else if (results && typeof results === 'object') {
+                reason = (results as any).message || (results as any).error || JSON.stringify(results);
+              }
+
+              const errorMsg = reason?.includes('phone number')
+                ? `ERRO: Cliente sem telefone cadastrado! (ID: ${eventData.client_id || 'N/A'})`
+                : `ERRO TÉCNICO: ${reason}`;
+
+              toast.error(errorMsg, { duration: 10000 });
+            } else if (hasSuccess) {
+              console.log('useEvent: Automation success', results);
+              toast.success(`SUCESSO: Notificação enviada para ${targetPhone}!`, { duration: 5000 });
+            } else {
+              console.log('useEvent: No automation executed', results);
+              toast.warning("ALERTA: Nenhuma automação configurada foi encontrada.", { duration: 10000 });
+            }
+          } catch (autoErr) {
+            toast.dismiss(toastId);
+            console.error('[Automation] Trigger failed:', autoErr);
+            const errorText = autoErr instanceof Error ? autoErr.message : 'Erro de rede ou desconhecido';
+            toast.error(`FALHA CRÍTICA: ${errorText}`, { duration: 10000 });
+            // window.alert(`FALHA CRÍTICA NA NOTIFICAÇÃO: ${errorText}`);
+          }
+        } else {
+          console.warn('useEvent: Event data not found for automation');
+          throw new Error("Dados do evento não encontrados. Automação falhou.");
         }
+      } else {
+        console.log('useEvent: Status is not conferido, skipping automation', data.status);
       }
     },
     onSuccess: () => {
@@ -326,4 +428,39 @@ export const useEvent = (id?: string) => {
     isLoading: isLoadingEvent || isLoadingChecklists,
     saveChecklist,
   };
+};
+
+export const useStaffEvents = (staffId?: string) => {
+  return useQuery({
+    queryKey: ['staff_events', staffId],
+    enabled: !!staffId,
+    queryFn: async () => {
+      // Fetch events where the staff is allocated
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          magodosdrinks_allocations!inner(staff_id)
+        `)
+        .eq('magodosdrinks_allocations.staff_id', staffId)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      return data.map((event: any) => ({
+        id: event.id,
+        name: event.name || `Evento de ${event.client_name}`,
+        client_id: event.client_id,
+        clientName: event.client_name,
+        clientPhone: event.client_phone || '',
+        location: event.location,
+        date: event.date,
+        contractValue: Number(event.contract_value || event.financial_value),
+        status: event.status,
+        createdAt: event.created_at,
+        package_id: event.package_id,
+        observations: event.observations,
+      })) as Evento[];
+    }
+  });
 };

@@ -49,11 +49,32 @@ export default function NovoEvento() {
     if (client) {
       setClientName(client.name);
       setClientPhone(client.phone || "");
+
+      // Auto-fill event name if empty
+      if (!eventName.trim()) {
+        setEventName(`Evento de ${client.name}`);
+      }
     }
   };
 
   const handleCreateClient = async (data: any) => {
-    await addClientMutation.mutateAsync(data);
+    try {
+      const newClient = await addClientMutation.mutateAsync(data);
+      if (newClient) {
+        setSelectedClientId(newClient.id);
+        setClientName(newClient.name);
+        setClientPhone(newClient.phone || "");
+
+        if (!eventName.trim()) {
+          setEventName(`Evento de ${newClient.name}`);
+        }
+
+        setIsClientDialogOpen(false);
+        // Toast is handled by hook, but we can add specific context
+      }
+    } catch (err) {
+      console.error("Error creating client in form:", err);
+    }
   };
 
   const { packages = [], isLoading: loadingPackages } = usePackages();
@@ -70,26 +91,69 @@ export default function NovoEvento() {
     setIsLoading(true);
 
     try {
-      // Combine date and time to ISO string
-      const dateTime = new Date(`${date}T${time}:00`).toISOString();
+      // 1. Validation
+      if (!clientName) {
+        toast.error("Por favor, preencha o nome do cliente.");
+        setIsLoading(false);
+        return;
+      }
+      if (!clientPhone) {
+        toast.error("Por favor, preencha o telefone do cliente.");
+        setIsLoading(false);
+        return;
+      }
+      if (!date) {
+        toast.error("Por favor, selecione a data do evento.");
+        setIsLoading(false);
+        return;
+      }
+      if (!time) {
+        toast.error("Por favor, selecione o horário do evento.");
+        setIsLoading(false);
+        return;
+      }
+      if (!location) {
+        toast.error("Por favor, preencha o local do evento.");
+        setIsLoading(false);
+        return;
+      }
+      if (!contractValue) {
+        toast.error("Por favor, preencha o valor do contrato.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Date Parsing
+      let isoDate;
+      try {
+        isoDate = new Date(`${date}T${time}:00`).toISOString();
+      } catch (err) {
+        toast.error("Data ou horário inválido.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Package Sanitization
+      const safePackageId = packageId === "none" ? undefined : packageId;
 
       await addEvent.mutateAsync({
-        name: eventName || `Evento de ${clientName}`,
+        name: eventName,
         clientName,
         clientPhone,
-        date: dateTime,
+        date: isoDate,
         location,
         contractValue: Number(contractValue),
-        status: "agendado", // Default status
-        package_id: packageId,
-        client_id: selectedClientId || undefined, // Add client_id
+        status: "agendado",
+        package_id: safePackageId,
+        client_id: selectedClientId || undefined,
         observations
       });
 
       toast.success("Evento agendado com sucesso!");
       navigate("/eventos");
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao criar evento:", error);
+      toast.error(`Erro ao salvar: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +228,7 @@ export default function NovoEvento() {
                   onChange={(e) => setClientName(e.target.value)}
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
                   placeholder="EX: CLUBE DE ENGENHARIA"
-                  required
+                  required={false}
                 />
               </div>
               <div className="space-y-2">
@@ -177,7 +241,7 @@ export default function NovoEvento() {
                   onChange={(e) => setClientPhone(e.target.value)}
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
                   placeholder="(00) 00000-0000"
-                  required
+                  required={false}
                 />
               </div>
             </div>
@@ -199,7 +263,7 @@ export default function NovoEvento() {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
-                  required
+                  required={false}
                 />
               </div>
               <div className="space-y-2">
@@ -212,7 +276,7 @@ export default function NovoEvento() {
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
-                  required
+                  required={false}
                 />
               </div>
               <div className="col-span-2 space-y-2">
@@ -225,7 +289,7 @@ export default function NovoEvento() {
                   onChange={(e) => setLocation(e.target.value)}
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
                   placeholder="ENDEREÇO COMPLETO..."
-                  required
+                  required={false}
                 />
               </div>
             </div>
@@ -273,7 +337,7 @@ export default function NovoEvento() {
                   onChange={(e) => setContractValue(e.target.value)}
                   className="border-2 border-border bg-card font-bold uppercase focus:border-primary"
                   placeholder="0.00"
-                  required
+                  required={false}
                 />
               </div>
               <div className="col-span-2 space-y-2">

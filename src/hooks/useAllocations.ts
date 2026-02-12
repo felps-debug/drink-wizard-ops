@@ -68,32 +68,60 @@ export function useAllocations(eventId?: string) {
             // 2. Fetch event details for the notification message
             const { data: eventData } = await supabase
                 .from('events')
-                .select('client_name, date, location')
+                .select('client_name, date, location, name')
                 .eq('id', eventId)
                 .single();
 
             const staffPhone = data.staff?.phone;
             const staffName = data.staff?.name || 'Profissional';
+            const staffRole = data.staff?.role; // Need to ensure role is selected in upsert query above
 
-            if (staffPhone && eventData) {
+            // Helper to normalize phone
+            const normalizePhone = (phone: string) => {
+                const cleaned = phone.replace(/\D/g, '');
+                // Case 1: 8 or 9 digits (Local number without DD) -> Assume 11 (SP)
+                if (cleaned.length === 8 || cleaned.length === 9) return `5511${cleaned}`;
+                // Case 2: 10 or 11 digits (Number with DD) -> Add 55
+                if (cleaned.length === 10 || cleaned.length === 11) return `55${cleaned}`;
+                // Case 3: Already has country code
+                return cleaned;
+            };
+
+            // ONLY NOTIFY BARTENDERS
+            // Note: The role in DB is 'bartender', UI label is 'Barman'
+            if (staffPhone && eventData && staffRole === 'bartender') {
                 const formattedDate = new Date(eventData.date).toLocaleDateString('pt-BR');
+                const eventName = eventData.name || `Evento de ${eventData.client_name}`;
+                const targetPhone = normalizePhone(staffPhone);
+
+                console.log(`[Allocation] Attempting to notify ${staffName} (${targetPhone})`);
+
                 const message = `🎉 Olá ${staffName}! Você foi escalado para o evento:\n\n` +
+                    `🍸 *${eventName}*\n` +
                     `📋 Cliente: ${eventData.client_name}\n` +
                     `📅 Data: ${formattedDate}\n` +
                     `📍 Local: ${eventData.location}\n\n` +
                     `Confirme sua presença respondendo esta mensagem!`;
 
                 try {
-                    await whatsappService.sendMessage(staffPhone, message);
-                    // Mark as sent
-                    await supabase
-                        .from('magodosdrinks_allocations')
-                        .update({ whatsapp_sent: true })
-                        .eq('id', data.id);
+                    const result = await whatsappService.sendMessage(targetPhone, message);
+                    if (result.status === 'success') {
+                        toast.success(`Notificação enviada para ${staffName}! 📱`);
+                        // Mark as sent
+                        await supabase
+                            .from('magodosdrinks_allocations')
+                            .update({ whatsapp_sent: true })
+                            .eq('id', data.id);
+                    } else {
+                        console.warn('[Allocation] WhatsApp service returned error:', result.error);
+                        // toast.warning(`Erro ao notificar WhatsApp: ${result.error}`);
+                    }
+
                 } catch (whatsappErr) {
                     console.error('[Allocation] WhatsApp failed:', whatsappErr);
-                    // Don't throw — allocation still succeeds even if WhatsApp fails
                 }
+            } else {
+                console.log(`[Allocation] Skipping WhatsApp. Role: ${staffRole}, Phone: ${staffPhone}`);
             }
 
             return data;
@@ -117,6 +145,7 @@ export function useAllocations(eventId?: string) {
             allocationId,
             staffName,
             staffPhone,
+            staffRole,
             eventName,
             eventDate,
             eventLocation
@@ -124,10 +153,23 @@ export function useAllocations(eventId?: string) {
             allocationId: string;
             staffName: string;
             staffPhone: string;
+            staffRole: string; // Added role
             eventName: string;
             eventDate: string;
             eventLocation: string;
         }) => {
+            // ONLY NOTIFY BARTENDERS
+            if (staffRole !== 'bartender') {
+                // Just update status, no WhatsApp
+                const { error } = await supabase
+                    .from('magodosdrinks_allocations')
+                    .update({ status: 'confirmado' })
+                    .eq('id', allocationId);
+
+                if (error) throw error;
+                return { status: 'skipped', message: 'Notificação ignorada para função não-bartender' };
+            }
+
             // 1. Fetch template from referencial
             const { data: refData } = await supabase
                 .from('magodosdrinks_referencial')
@@ -145,8 +187,18 @@ export function useAllocations(eventId?: string) {
                 .replace('{data}', eventDate)
                 .replace('{local}', eventLocation);
 
+            // Helper (duplicated for now, could move to utils)
+            const normalizePhone = (phone: string) => {
+                const cleaned = phone.replace(/\D/g, '');
+                if (cleaned.length === 8 || cleaned.length === 9) return `5511${cleaned}`;
+                if (cleaned.length === 10 || cleaned.length === 11) return `55${cleaned}`;
+                return cleaned;
+            };
+
+            const targetPhone = normalizePhone(staffPhone);
+
             // 3. Send WhatsApp
-            const result = await whatsappService.sendMessage(staffPhone, message);
+            const result = await whatsappService.sendMessage(targetPhone, message);
 
             if (result.status === 'error') {
                 throw new Error(result.error || 'Falha ao enviar WhatsApp');
@@ -200,4 +252,34 @@ export function useAllocations(eventId?: string) {
         confirmAndNotify,
         removeAllocation
     };
+}
+
+export function useBusyStaff(date: string) {
+    return useQuery({
+        queryKey: ['busy_staff', date],
+        enabled: !!date,
+        queryFn: async () => {
+            // 1. Get all events on this date
+            const { data: events } = await supabase
+                .from('events')
+                .select('id')
+                .eq('date', date);
+
+            if (!events || events.length === 0) return [];
+
+            const eventIds = events.map(e => e.id);
+
+            // 2. Get allocations for these events
+            const { data: allocations } = await supabase
+                .from('magodosdrinks_allocations')
+                .select('staff_id')
+                .in('event_id', eventIds)
+                .neq('status', 'cancelado');
+
+            if (!allocations) return [];
+
+            // Return array of distinct staff IDs
+            return [...new Set(allocations.map(a => a.staff_id))];
+        }
+    });
 }

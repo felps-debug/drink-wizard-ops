@@ -8,14 +8,21 @@ import {
   getStatusLabel
 } from "@/lib/mock-data";
 import { useAuth } from "@/context/AuthContext";
-import { useEvents } from "@/hooks/useEvents";
+import { useEvents, useStaffEvents } from "@/hooks/useEvents";
 
 export function StaffDashboard() {
   const { user } = useAuth();
 
 
 
-  const { events, isLoading, updateEventStatus } = useEvents();
+  const { events: allEvents, updateEventStatus } = useEvents(); // Keep updateEventStatus
+  const { data: myEvents, isLoading } = useStaffEvents(user?.id);
+
+  // If user is admin/admin-like, maybe show all? User said "Os outros só...". Admin implies "All".
+  // But StaffDashboard is for staff. AdminDashboard is for Admin.
+  // However, check if `events` was used for anything else.
+
+  const events = myEvents || [];
 
   // Filter events based on role
   const getRelevantEvents = () => {
@@ -179,6 +186,50 @@ export function StaffDashboard() {
         )}
       </section>
 
+      {/* INBOX / CONVITES */}
+      <StaffInbox />
+
     </div>
+  );
+}
+
+import { useMyInvites, getStaffRoleLabel } from "@/hooks/useStaff";
+import { Mail, ShieldCheck } from "lucide-react";
+
+function StaffInbox() {
+  const { user } = useAuth();
+  const { invites, acceptInvite } = useMyInvites(user?.email);
+
+  if (invites.length === 0) return null;
+
+  return (
+    <section className="space-y-4">
+      <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground border-l-2 border-primary pl-2">Caixa de Entrada</h2>
+
+      {invites.map(invite => (
+        <div key={invite.id} className="border-2 border-primary/50 bg-primary/10 p-6 flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 bg-primary/20 flex items-center justify-center rounded-full">
+              <Mail className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-display text-lg font-bold uppercase text-white">Convite para Equipe</h3>
+              <p className="text-sm text-muted-foreground">
+                Você foi convidado para atuar como <span className="text-primary font-bold uppercase">{getStaffRoleLabel(invite.role)}</span>.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => acceptInvite.mutate({ staffId: invite.id, userId: user!.id, role: invite.role })}
+            disabled={acceptInvite.isPending}
+            className="bg-primary text-white hover:bg-primary/90 font-bold uppercase"
+          >
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            {acceptInvite.isPending ? "Aceitando..." : "Aceitar Convite"}
+          </Button>
+        </div>
+      ))}
+    </section>
   );
 }

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 ### Fixed
+- **Fluxo de Novo Evento**:
+  - `handleCreateClient` agora apenas seleciona o cliente criado, sem criar evento automaticamente.
+  - Nome do evento é preenchido automaticamente (`Evento de {Nome}`) apenas se estiver vazio, permitindo edição manual real.
+- **Aba Automações**:
+  - Adicionado suporte a edição de automações (`onClick` no Card abre Dialog com dados).
+  - Formulários agora carregam dados iniciais corretamente.
+- **Notificações**:
+  - `useAllocations`: Template de WhatsApp para staff agora inclui o **Nome do Evento** explícito.
+  - `NovoEvento`: Removida lógica de fallback que sobrescrevia nomes customizados.
 - **Login Persistence**: Removed hardcoded admin email in `AuthContext.tsx`. Roles now derived from DB `cargo` field.
 - **Auth Loading Hang**: Complete rewrite of `AuthContext.tsx` — uses `getSession()` for init + `onAuthStateChange` for future events. Removed `fetchingRef` guard that caused race conditions. Added auto-upsert for missing profiles.
 - **Login Button Hang**: `signInWithEmail` now builds user immediately after `signInWithPassword` success. `handleLogin` navigates directly to dashboard instead of relying on `useEffect` watching auth state. Eliminates "ENTRANDO..." stuck state.

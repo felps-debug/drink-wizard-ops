@@ -35,6 +35,7 @@ export default function Equipe() {
   // Form State
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
+  const [formEmail, setFormEmail] = useState(""); // New state
   const [formRoles, setFormRoles] = useState<StaffRole[]>(["bartender"]);
   const [formDailyRate, setFormDailyRate] = useState("");
   const [formLoading, setFormLoading] = useState(false);
@@ -46,12 +47,15 @@ export default function Equipe() {
       await addStaff.mutateAsync({
         name: formName,
         phone: formPhone,
+        email: formEmail || undefined, // Pass email
+        status: formEmail ? 'pending' : 'active',
         role: formRoles[0], // Use first selected role (table only supports single role)
         daily_rate: parseFloat(formDailyRate) || 0
       });
       setIsAddOpen(false);
       setFormName("");
       setFormPhone("");
+      setFormEmail("");
       setFormRoles(["bartender"]);
       setFormDailyRate("");
     } catch (err) {
@@ -218,6 +222,19 @@ export default function Equipe() {
                     required
                     className="rounded-none border-white/20 bg-black focus:border-primary"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="uppercase font-bold">Email (Para Convite)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="email@exemplo.com"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    className="rounded-none border-white/20 bg-black focus:border-primary"
+                  />
+                  <p className="text-[10px] text-muted-foreground uppercase">Se preenchido, enviará um convite para a caixa de entrada.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="uppercase font-bold">Telefone (WhatsApp)</Label>

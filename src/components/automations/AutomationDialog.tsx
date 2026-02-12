@@ -1,4 +1,4 @@
-import { useAutomations } from '@/hooks/useAutomations';
+import { useAutomations, AutomationTrigger } from '@/hooks/useAutomations';
 import {
   Dialog,
   DialogContent,
@@ -10,10 +10,11 @@ import { AutomationForm } from './AutomationForm';
 interface AutomationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: AutomationTrigger;
 }
 
-export function AutomationDialog({ open, onOpenChange }: AutomationDialogProps) {
-  const { createAutomation } = useAutomations();
+export function AutomationDialog({ open, onOpenChange, initialData }: AutomationDialogProps) {
+  const { createAutomation, updateAutomation } = useAutomations();
 
   const handleSubmit = async (data: {
     name: string;
@@ -21,24 +22,36 @@ export function AutomationDialog({ open, onOpenChange }: AutomationDialogProps) 
     message: string;
   }) => {
     try {
-      await createAutomation.mutateAsync({
-        name: data.name,
-        trigger_event: data.trigger_event,
-        action_type: 'whatsapp',
-        action_config: {
-          message: data.message,
-          phone_source: 'event.client_phone',
-          delay_seconds: 0,
-          max_retries: 3,
-        },
-        active: true,
-      });
+      if (initialData) {
+        await updateAutomation.mutateAsync({
+          ...initialData,
+          name: data.name,
+          trigger_event: data.trigger_event,
+          action_config: {
+            ...initialData.action_config,
+            message: data.message,
+          },
+        });
+      } else {
+        await createAutomation.mutateAsync({
+          name: data.name,
+          trigger_event: data.trigger_event,
+          action_type: 'whatsapp',
+          action_config: {
+            message: data.message,
+            phone_source: 'event.client_phone',
+            delay_seconds: 0,
+            max_retries: 3,
+          },
+          active: true,
+        });
+      }
 
       // Close dialog on success
       onOpenChange(false);
     } catch (error) {
       // Error is handled by mutation onError
-      console.error('Failed to create automation:', error);
+      console.error('Failed to save automation:', error);
     }
   };
 
@@ -50,17 +63,18 @@ export function AutomationDialog({ open, onOpenChange }: AutomationDialogProps) 
       >
         <DialogHeader className="pr-10">
           <DialogTitle className="font-display text-2xl font-black uppercase text-primary">
-            Nova Automação
+            {initialData ? 'Editar Automação' : 'Nova Automação'}
           </DialogTitle>
           <p className="font-mono text-xs uppercase text-muted-foreground mt-1">
-            Configure um novo gatilho de automação
+            {initialData ? 'Atualize as configurações do gatilho' : 'Configure um novo gatilho de automação'}
           </p>
         </DialogHeader>
 
         <div className="py-4">
           <AutomationForm
             onSubmit={handleSubmit}
-            isLoading={createAutomation.isPending}
+            isLoading={createAutomation.isPending || updateAutomation.isPending}
+            initialData={initialData}
           />
         </div>
       </DialogContent>

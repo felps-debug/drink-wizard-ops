@@ -109,12 +109,14 @@ async function sendWhatsAppMessage(
     };
   }
 
-  console.log(`[WhatsApp] Calling UAZapi directly: ${UAZAPI_URL}/send/text`);
+  // Fix URL double slash issue if present
+  const baseUrl = UAZAPI_URL.replace(/\/$/, "");
+  console.log(`[WhatsApp] Calling UAZapi directly: ${baseUrl}/send/text`);
   console.log(`[WhatsApp] Sending to: ${normalized}`);
 
   try {
     const response = await fetch(
-      `${UAZAPI_URL}/send/text`,
+      `${baseUrl}/send/text`,
       {
         method: "POST",
         headers: {
@@ -152,13 +154,42 @@ async function sendWhatsAppMessage(
   }
 }
 
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const payload = await req.json() as WebhookPayload;
     console.log(`[Automation] Webhook received: table=${payload.table}, type=${payload.type}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const uazapiToken = Deno.env.get("UAZAPI_TOKEN");
+
+    // Critical: Check secrets before crashing
+    const missingSecrets = [];
+    if (!supabaseUrl) missingSecrets.push("SUPABASE_URL");
+    if (!serviceRoleKey) missingSecrets.push("SUPABASE_SERVICE_ROLE_KEY");
+    if (!uazapiToken) missingSecrets.push("UAZAPI_TOKEN");
+
+    if (missingSecrets.length > 0) {
+      console.error(`[Automation] Missing secrets: ${missingSecrets.join(", ")}`);
+      return new Response(JSON.stringify({
+        status: "error",
+        message: `Configuration Error: Missing secrets [${missingSecrets.join(", ")}]. Please check Edge Function secrets.`
+      }), {
+        status: 200, // Return 200 to allow client parsing
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const record = payload.record;
@@ -167,7 +198,7 @@ serve(async (req) => {
       console.log("[Automation] No record in payload");
       return new Response(JSON.stringify({ message: "No record" }), {
         status: 200,
-        headers: { "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -183,6 +214,10 @@ serve(async (req) => {
         triggerEvent = "checklist_saida";
       } else if (payload.event_type === "event_created") {
         triggerEvent = "event_created";
+      } else if (payload.event_type === "entrega_confirmada") {
+        triggerEvent = "status_entregue";
+      } else if (payload.event_type === "montagem_finalizada") {
+        triggerEvent = "status_montagem";
       }
       console.log(`[Automation] Using event_type parameter: ${payload.event_type} -> ${triggerEvent}`);
     }
@@ -207,7 +242,7 @@ serve(async (req) => {
       console.log(`[Automation] No matching trigger for: table=${payload.table}, type=${payload.type}, event_type=${payload.event_type}`);
       return new Response(JSON.stringify({ message: "No matching trigger" }), {
         status: 200,
-        headers: { "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -228,7 +263,7 @@ serve(async (req) => {
       console.log(`[Automation] No active automations for trigger: ${triggerEvent}`);
       return new Response(JSON.stringify({ message: "No matching automations" }), {
         status: 200,
-        headers: { "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -282,16 +317,36 @@ serve(async (req) => {
         const message = substituteVariables(messageTemplate, substitutionData);
         console.log(`[Automation] Substituted message: ${message.substring(0, 80)}...`);
 
+
         // Determine phone number
-        const phone = substitutionData.client_phone || substitutionData.phone;
+        let phone = substitutionData.client_phone || substitutionData.phone;
+        let phoneSource = "payload/event";
+
+        // Fallback: Fetch from clients table if phone is missing but client_id exists
+        if (!phone && substitutionData.client_id) {
+          console.log(`[Automation] Phone missing, attempting fetch from clients table for: ${substitutionData.client_id}`);
+          const { data: clientData } = await supabase
+            .from("clients")
+            .select("phone")
+            .eq("id", substitutionData.client_id)
+            .single();
+
+          if (clientData && clientData.phone) {
+            phone = clientData.phone;
+            phoneSource = "clients_table";
+            console.log(`[Automation] Found phone in clients table: ${phone}`);
+          }
+        }
 
         if (!phone) {
           console.warn(`[Automation] No phone number available for automation: ${automation.id}`);
+          console.warn(`[Automation] Substitution Data Keys: ${Object.keys(substitutionData).join(", ")}`);
           results.push({
             automation_id: automation.id,
             automation_name: automation.name,
             status: "error",
-            reason: "No phone number available"
+            reason: "No phone number available",
+            substitution_keys: Object.keys(substitutionData)
           });
           continue;
         }
@@ -340,7 +395,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(results), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (error) {
@@ -352,7 +407,7 @@ serve(async (req) => {
       message: errorMessage
     }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
