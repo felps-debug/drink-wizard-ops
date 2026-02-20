@@ -79,6 +79,8 @@ export default function Equipe() {
         return "secondary";
       case "montador":
         return "outline";
+      case "entregador":
+        return "outline";
       default:
         return "outline";
     }
@@ -109,7 +111,7 @@ export default function Equipe() {
         {/* Header */}
         <div className="flex flex-col gap-4">
           <h1 className="font-display text-3xl font-bold uppercase text-white">Equipe Tática</h1>
-          <p className="text-muted-foreground font-mono text-sm">Gerencie seus profissionais: Bartenders, Chefes de Bar e Montadores.</p>
+          <p className="text-muted-foreground font-mono text-sm">Gerencie seus profissionais: Bartenders, Chefes de Bar, Montadores e Entregadores.</p>
 
           {/* Search */}
           <div className="relative">
@@ -124,8 +126,8 @@ export default function Equipe() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {(['bartender', 'chefe_bar', 'montador'] as StaffRole[]).map((role) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {(['bartender', 'chefe_bar', 'montador', 'entregador'] as StaffRole[]).map((role) => (
             <Card key={role} className="border-white/10 bg-black/40">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-primary">{staff.filter(s => s.role === role).length}</p>
@@ -251,7 +253,7 @@ export default function Equipe() {
                 <div className="space-y-3">
                   <Label className="uppercase font-bold">Funções (Missões Aptas)</Label>
                   <div className="grid grid-cols-2 gap-4 border-2 border-white/10 p-4 bg-black">
-                    {(['bartender', 'chefe_bar', 'montador'] as StaffRole[]).map((r) => (
+                    {(['bartender', 'chefe_bar', 'montador', 'entregador'] as StaffRole[]).map((r) => (
                       <div key={r} className="flex items-center space-x-2">
                         <Checkbox
                           id={`role-${r}`}

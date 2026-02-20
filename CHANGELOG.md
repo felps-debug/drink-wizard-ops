@@ -1,6 +1,15 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- **Edge Function `invite-agent`**: Creates auth user, profile with correct role, and links to `magodosdrinks_staff`. Deployed and active.
+- **Entregador Role**: Full support for `entregador` role in `StaffRole` type, `Equipe.tsx` UI (stats, badges, form), and DB CHECK constraints.
+
+### Fixed
+- **User Creation**: `useTeam.inviteMember` now calls `invite-agent` via direct fetch (previously called non-existent Edge Function).
+- **Team Invites**: Fixed `team_invites` insert column from `role` to `cargo` (matching actual DB schema).
+- **DB Constraints**: Added `entregador` to `magodosdrinks_users` and `magodosdrinks_team_invites` CHECK constraints.
+
 ### Fixed
 - **Fluxo de Novo Evento**:
   - `handleCreateClient` agora apenas seleciona o cliente criado, sem criar evento automaticamente.

@@ -64,17 +64,35 @@ export const useTeam = () => {
   // 3. Invite Member Action
   const inviteMember = useMutation({
     mutationFn: async ({ email, role, name }: { email: string, role: UserRole, name: string }) => {
-      const { data, error } = await supabase.functions.invoke('invite-agent', {
-        body: { email, role, full_name: name }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      // Call invite-agent Edge Function via direct fetch
+      const response = await fetch(`${supabaseUrl}/functions/v1/invite-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({ email, role, full_name: name }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        console.error('[useTeam] invite-agent error:', errBody);
+        throw new Error(errBody.error || `Edge Function error: ${response.status}`);
+      }
 
-      // Also record in team_invites for visibility in the list
-      await supabase.from('team_invites').insert({ email, role: role });
+      const result = await response.json();
+      console.log('[useTeam] invite-agent success:', result);
+
+      // Record in team_invites for visibility (column is 'cargo', not 'role')
+      await supabase.from('team_invites').insert({ email, cargo: role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team_invites'] });
+      queryClient.invalidateQueries({ queryKey: ['team_members'] });
       toast.success("Convite enviado com sucesso!");
     },
     onError: (err: any) => {

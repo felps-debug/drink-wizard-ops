@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-export type StaffRole = 'bartender' | 'chefe_bar' | 'montador';
+export type StaffRole = 'bartender' | 'chefe_bar' | 'montador' | 'entregador';
 
 export interface Staff {
     id: string;
@@ -167,7 +167,8 @@ export function getStaffRoleLabel(role: StaffRole): string {
     const labels: Record<StaffRole, string> = {
         bartender: 'Barman',
         chefe_bar: 'Chefe de Bar',
-        montador: 'Montador'
+        montador: 'Montador',
+        entregador: 'Entregador'
     };
     return labels[role] || role;
 }
