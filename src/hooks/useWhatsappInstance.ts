@@ -73,6 +73,10 @@ export function useWhatsappInstance() {
             });
             if (error) throw error;
             return data; // Usually contains qrcode or paircode
+        },
+        onError: (err: any) => {
+            console.error('Erro ao conectar:', err);
+            toast.error('Erro ao gerar QR Code. Tente remover a instância e criar novamente se o problema persistir.');
         }
     });
 

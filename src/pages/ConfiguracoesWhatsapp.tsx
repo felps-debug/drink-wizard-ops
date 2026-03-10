@@ -13,19 +13,29 @@ export default function ConfiguracoesWhatsapp() {
     // Auto-poll status if connecting
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (instance?.status === 'connecting' || instance?.status === 'disconnected') {
+        if (instance?.status === 'connecting' || instance?.status === 'disconnected' || (instance && !qrCodeData)) {
             interval = setInterval(async () => {
-                const status = await checkStatus.mutateAsync({
-                    instanceId: instance.instance_id,
-                    instanceToken: instance.instance_token
-                });
-                if (status.instance?.status === 'connected') {
-                    setQrCodeData(null);
+                try {
+                    const status = await checkStatus.mutateAsync({
+                        instanceId: instance.instance_id,
+                        instanceToken: instance.instance_token
+                    });
+
+                    // Se a Uazapi retornar o QR Code no status, atualiza a UI
+                    if (status.instance?.qrcode && !qrCodeData) {
+                        setQrCodeData(status.instance.qrcode);
+                    }
+
+                    if (status.instance?.status === 'connected') {
+                        setQrCodeData(null);
+                    }
+                } catch (e) {
+                    console.error("Erro no polling de status:", e);
                 }
             }, 5000);
         }
         return () => clearInterval(interval);
-    }, [instance?.status]);
+    }, [instance?.status, instance?.instance_id, qrCodeData]);
 
     const handleCreate = () => {
         createInstance.mutate('WhatsApp Empresa');
@@ -36,8 +46,13 @@ export default function ConfiguracoesWhatsapp() {
         setIsGeneratingQr(true);
         try {
             const data = await connectInstance.mutateAsync(instance.instance_token);
-            if (data.qrcode) {
-                setQrCodeData(data.qrcode);
+            // Uazapi costuma retornar o qrcode dentro do objeto instance
+            const qr = data.qrcode || data.instance?.qrcode;
+            if (qr) {
+                setQrCodeData(qr);
+            } else {
+                // Se não retornar na hora, o useEffect de polling vai pegar logo em seguida
+                console.log("QR Code não retornado imediatamente, aguardando polling...");
             }
         } finally {
             setIsGeneratingQr(false);
@@ -127,9 +142,22 @@ export default function ConfiguracoesWhatsapp() {
                                     </div>
 
                                     {!qrCodeData ? (
-                                        <Button className="w-full py-8 text-lg" onClick={handleConnect} disabled={isGeneratingQr}>
-                                            {isGeneratingQr ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <QrCode className="mr-2 h-6 w-6" />}
-                                            Gerar QR Code de Conexão
+                                        <Button
+                                            className="w-full py-8 text-lg"
+                                            onClick={handleConnect}
+                                            disabled={isGeneratingQr || instance.status === 'connecting'}
+                                        >
+                                            {isGeneratingQr || instance.status === 'connecting' ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                                                    Gerando QR Code...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <QrCode className="mr-2 h-6 w-6" />
+                                                    Gerar QR Code de Conexão
+                                                </>
+                                            )}
                                         </Button>
                                     ) : (
                                         <div className="flex flex-col items-center gap-6 p-6 bg-white rounded-xl shadow-inner border">
@@ -169,7 +197,7 @@ export default function ConfiguracoesWhatsapp() {
                             </div>
                             <div className="flex items-center justify-between py-2 border-b text-sm">
                                 <span className="text-muted-foreground">URL Base</span>
-                                <span className="text-xs">Uazapi Nexus Ultra</span>
+                                <span className="text-xs font-mono">workaholicdd.uazapi.com</span>
                             </div>
                         </CardContent>
                     </Card>
