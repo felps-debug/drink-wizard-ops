@@ -4,6 +4,7 @@
 ### Added
 - **Edge Function `invite-agent`**: Creates auth user, profile with correct role, and links to `magodosdrinks_staff`. Deployed and active.
 - **Entregador Role**: Full support for `entregador` role in `StaffRole` type, `Equipe.tsx` UI (stats, badges, form), and DB CHECK constraints.
+- **README.md**: Portfolio-ready project documentation with features, stack, architecture, and data model.
 
 ### Fixed
 - **User Creation**: `useTeam.inviteMember` now calls `invite-agent` via direct fetch (previously called non-existent Edge Function).

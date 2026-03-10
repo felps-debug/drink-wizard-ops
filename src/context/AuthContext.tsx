@@ -15,6 +15,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  verifyOtp: (email: string, code: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => { },
   signInWithEmail: async () => { },
   signUpWithEmail: async () => { },
+  verifyOtp: async () => { },
   resetPassword: async () => { },
   signOut: async () => { },
 });
@@ -274,6 +276,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       },
     });
     if (error) throw error;
+
+    // Trigger Resend OTP via Edge Function
+    try {
+      await supabase.functions.invoke('resend-auth', {
+        body: { action: 'send', email, name }
+      });
+    } catch (e) {
+      console.warn('[Auth] Resend OTP trigger failed, but user created. They might need manual confirmation or resend.', e);
+    }
+  };
+
+  const verifyOtp = async (email: string, code: string) => {
+    const { data, error } = await supabase.functions.invoke('resend-auth', {
+      body: { action: 'verify', email, code }
+    });
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    return data;
   };
 
   const resetPassword = async (email: string) => {
@@ -291,7 +313,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthContext.Provider value={{
       user, loading,
-      signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signOut,
+      signInWithGoogle, signInWithEmail, signUpWithEmail, verifyOtp, resetPassword, signOut,
     }}>
       {children}
     </AuthContext.Provider>

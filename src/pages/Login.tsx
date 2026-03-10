@@ -19,6 +19,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -52,10 +54,28 @@ export default function Login() {
     setError(null);
     try {
       await signUpWithEmail(email, password, name);
-      // Supabase default: requires email confirmation usually, or helper message
-      setError("Conta criada! Verifique seu email se necessário, ou faça login.");
+      setShowOtp(true);
+      setError(null); // Clear previous errors
     } catch (err: any) {
       setError(err.message || "Erro ao criar conta");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const { verifyOtp } = useAuth(); // Actually already in closure
+      await verifyOtp(email, otpCode);
+
+      // Auto login after verification
+      await signInWithEmail(email, password);
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      setError(err.message || "Código inválido");
     } finally {
       setLoading(false);
     }
@@ -145,50 +165,90 @@ export default function Login() {
             </TabsContent>
 
             <TabsContent value="register" className="mt-4 space-y-4">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-name">Nome Completo</Label>
-                  <Input
-                    id="reg-name"
-                    placeholder="João Barman"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="rounded-none border-border bg-background focus:border-primary"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <Input
-                    id="reg-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="rounded-none border-border bg-background focus:border-primary"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Senha</Label>
-                  <Input
-                    id="reg-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="rounded-none border-border bg-background focus:border-primary"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full rounded-none font-bold uppercase"
-                  disabled={loading}
-                >
-                  {loading ? "Criando..." : "Criar Conta"}
-                </Button>
-              </form>
+              {!showOtp ? (
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-name">Nome Completo</Label>
+                    <Input
+                      id="reg-name"
+                      placeholder="João Barman"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="rounded-none border-border bg-background focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-email">Email</Label>
+                    <Input
+                      id="reg-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="rounded-none border-border bg-background focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-password">Senha</Label>
+                    <Input
+                      id="reg-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="rounded-none border-border bg-background focus:border-primary"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full rounded-none font-bold uppercase"
+                    disabled={loading}
+                  >
+                    {loading ? "Criando..." : "Criar Conta"}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="text-center space-y-2">
+                    <Alert className="border-primary/50 bg-primary/5">
+                      <AlertDescription>
+                        Enviamos um código de 6 dígitos para <strong>{email}</strong>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="otp-code">Código de Verificação</Label>
+                    <Input
+                      id="otp-code"
+                      placeholder="000000"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      required
+                      className="rounded-none border-border bg-background text-center text-2xl tracking-[10px] focus:border-primary"
+                      maxLength={6}
+                      autoFocus
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full rounded-none font-bold uppercase"
+                    disabled={loading}
+                  >
+                    {loading ? "Verificando..." : "Verificar Código"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className="w-full text-xs"
+                    onClick={() => setShowOtp(false)}
+                  >
+                    Voltar para o cadastro
+                  </Button>
+                </form>
+              )}
             </TabsContent>
           </Tabs>
 

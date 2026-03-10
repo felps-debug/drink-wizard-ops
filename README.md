@@ -1,73 +1,194 @@
-# Welcome to your Lovable project
+# 🍸 Mago dos Drinks
 
-## Project info
+Sistema completo de gestão operacional para empresas de bartending e eventos.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Plataforma web moderna que centraliza toda a operação: cadastro de clientes, criação de eventos, controle de estoque, escala de equipe, checklists de campo e notificações automáticas via WhatsApp.
 
-## How can I edit this code?
+<br>
 
-There are several ways of editing your application.
+## ✨ Visão Geral
 
-**Use Lovable**
+O Mago dos Drinks resolve um problema real: a gestão manual e fragmentada de empresas que operam em eventos. Planilhas, mensagens soltas no WhatsApp e falta de controle são substituídos por uma plataforma única, acessível de qualquer dispositivo.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+O sistema foi projetado para diferentes perfis de usuário, cada um com permissões e visões específicas da operação.
 
-Changes made via Lovable will be committed automatically to this repo.
+<br>
 
-**Use your preferred IDE**
+## 🧩 Features
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 📅 Gestão de Eventos
+Criação de eventos com dados do cliente, local, data, valor do contrato e pacote de drinks. Cada evento possui um pipeline visual de status:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+`Agendado → Montagem → Montado → Entregue → Em Curso → Finalizado`
 
-Follow these steps:
+O admin acompanha cada etapa em tempo real e transições de status podem disparar automações.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 👥 Gestão de Equipe
+Cadastro de profissionais com quatro perfis operacionais:
 
-# Step 3: Install the necessary dependencies.
-npm i
+| Perfil | Função |
+|--------|--------|
+| Barman | Atua no evento servindo drinks |
+| Chefe de Bar | Supervisiona a operação no local |
+| Montador | Responsável pela montagem e desmontagem |
+| Entregador | Realiza o transporte de equipamentos |
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Cada profissional tem telefone, email e diária configurável. O sistema suporta convites por email que criam automaticamente a conta do profissional.
+
+---
+
+### 📊 Escala Operacional
+Para cada evento, o admin monta a escala selecionando profissionais disponíveis. O sistema verifica automaticamente conflitos de data, impedindo que um profissional seja alocado em dois eventos no mesmo dia.
+
+---
+
+### 📱 Notificações WhatsApp
+Ao alocar um profissional, o sistema envia uma notificação via WhatsApp com os dados do evento (nome, data, local). Normalização automática de números brasileiros e controle de reenvio.
+
+---
+
+### 📦 Pacotes de Drinks
+Pacotes pré-configurados (ex: "Premium Gin", "Open Bar Clássico") com lista de ingredientes e quantidades. Ao vincular um pacote a um evento, o sistema já sabe quais insumos serão necessários.
+
+---
+
+### 🧪 Controle de Estoque
+Cadastro de ingredientes com unidade de medida, categoria e estoque atual. Histórico de preços para acompanhar variações de custo.
+
+---
+
+### ✅ Checklists de Campo
+
+| Tipo | Quando | Finalidade |
+|------|--------|------------|
+| Entrada | Antes do evento | Conferir o que foi levado ao local |
+| Saída | Após o evento | Conferir o que retornou do local |
+
+Registram quem conferiu e quando. A finalização de cada checklist pode transicionar automaticamente o status do evento.
+
+---
+
+### 🤖 Automações
+Motor de automações configurável. Quando determinados eventos acontecem (ex: status muda para "finalizado"), o sistema pode disparar ações automáticas como envio de mensagem WhatsApp para o cliente, usando templates com variáveis dinâmicas.
+
+---
+
+### 📈 Relatórios
+Dashboard com métricas operacionais: faturamento total, custo operacional, margem de lucro e distribuição de custos por categoria.
+
+---
+
+### 👤 Gestão de Clientes
+Cadastro de clientes com nome, telefone, email e CPF/CNPJ. Histórico de eventos vinculados a cada cliente.
+
+---
+
+### 🔐 Controle de Acesso
+
+| Perfil | Acesso |
+|--------|--------|
+| Admin | Acesso total ao sistema |
+| Chefe de Bar | Eventos, insumos, clientes e checklists |
+| Barman / Montador / Entregador | Eventos, escalas e perfil pessoal |
+
+Autenticação com email/senha e Google OAuth.
+
+<br>
+
+## 🛠️ Stack
+
+### Frontend
+
+| Tecnologia | Uso |
+|------------|-----|
+| React 18 | Interface de usuário |
+| TypeScript | Tipagem estática |
+| Vite | Build tool e dev server |
+| React Router v6 | Roteamento SPA |
+| TanStack React Query | Cache e estado do servidor |
+| Shadcn/UI + Radix UI | Componentes acessíveis |
+| Tailwind CSS | Estilização |
+| Recharts | Gráficos |
+
+### Backend
+
+| Tecnologia | Uso |
+|------------|-----|
+| Supabase | BaaS (Database, Auth, Edge Functions) |
+| PostgreSQL | Banco de dados relacional |
+| Row Level Security | Controle de acesso por linha |
+| Edge Functions (Deno) | Lógica serverless |
+
+<br>
+
+## 🏗️ Arquitetura
+
+```
+src/
+├── components/         # Componentes reutilizáveis
+│   ├── ui/             # 49 componentes Shadcn/UI
+│   ├── layout/         # AppLayout, Sidebar, BottomNav
+│   ├── events/         # Escala e Checklists
+│   └── auth/           # ProtectedRoute
+├── pages/              # 20 páginas
+├── hooks/              # 14 custom hooks
+├── context/            # Autenticação global
+├── services/           # WhatsApp service
+└── lib/                # Utilitários e tipos
+
+supabase/functions/
+├── invite-agent/       # Criação de usuários
+├── whatsapp-notify/    # Notificações WhatsApp
+└── handle-automation/  # Motor de automações
+```
+
+<br>
+
+## 🗃️ Modelo de Dados
+
+| Tabela | Descrição |
+|--------|-----------|
+| profiles | Perfis de usuário com role e permissões |
+| events | Eventos com status, pacote e cliente |
+| clients | Cadastro de clientes |
+| magodosdrinks_staff | Equipe operacional |
+| magodosdrinks_allocations | Escalas (staff ↔ evento) |
+| magodosdrinks_packages | Pacotes de drinks |
+| ingredients | Insumos e estoque |
+| checklists | Checklists de entrada e saída |
+| operational_costs | Custos operacionais por evento |
+| staff_availability | Disponibilidade da equipe |
+| automation_triggers | Regras de automação |
+
+<br>
+
+## 🚀 Como Rodar
+
+```bash
+# Instalar dependências
+npm install
+
+# Configurar variáveis de ambiente
+cp .env.example .env.local
+
+# Rodar em desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+<br>
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📸 Destaques Técnicos
 
-**Use GitHub Codespaces**
+🔹 14 Custom Hooks com React Query para cache inteligente e mutations otimistas
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+🔹 3 Edge Functions serverless em Deno para lógica de backend
 
-## What technologies are used for this project?
+🔹 Row Level Security em todas as tabelas
 
-This project is built with:
+🔹 Pipeline de eventos com transições que disparam automações
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+🔹 Normalização de telefone brasileira com suporte a múltiplos formatos
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+🔹 Design system com tema dark, UI responsiva e mobile-first

@@ -1,4 +1,5 @@
-import { Bell, Menu, User, LogIn } from "lucide-react";
+import { Bell, Menu, User, LogIn, MessageSquare } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import {
@@ -29,7 +30,7 @@ export function Header({ title = "Mago dos Drinks" }: HeaderProps) {
 
         <div className="flex items-center gap-2">
           <ModeToggle />
-          
+
           {user ? (
             <>
               <Button variant="ghost" size="icon" className="relative">
@@ -43,10 +44,10 @@ export function Header({ title = "Mago dos Drinks" }: HeaderProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
                     {user.avatar_url ? (
-                      <img 
-                        src={user.avatar_url} 
-                        alt={user.name} 
-                        className="h-6 w-6 rounded-full" 
+                      <img
+                        src={user.avatar_url}
+                        alt={user.name}
+                        className="h-6 w-6 rounded-full"
                       />
                     ) : (
                       <User className="h-5 w-5 text-foreground" />
@@ -63,10 +64,17 @@ export function Header({ title = "Mago dos Drinks" }: HeaderProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Meu Perfil</DropdownMenuItem>
-                  <DropdownMenuItem>Configurações</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer w-full">Meu Perfil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/configuracoes" className="cursor-pointer w-full">Configurações</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/configuracoes/whatsapp" className="cursor-pointer w-full">Configurações WhatsApp</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-destructive cursor-pointer"
                     onClick={signOut}
                   >

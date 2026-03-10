@@ -22,6 +22,7 @@ import Pacotes from "./pages/Pacotes";
 import PackageDetails from "./pages/PackageDetails";
 import Clientes from "./pages/Clientes";
 import ClientDetails from "./pages/ClientDetails";
+import ConfiguracoesWhatsapp from "./pages/ConfiguracoesWhatsapp";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/automacoes" element={<Automacoes />} />
                 <Route path="/pacotes" element={<Pacotes />} />
                 <Route path="/pacotes/:id" element={<PackageDetails />} />
+                <Route path="/configuracoes/whatsapp" element={<ConfiguracoesWhatsapp />} />
               </Route>
 
               {/* Protected Routes - Generic */}

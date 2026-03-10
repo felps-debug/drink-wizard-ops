@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Home, Calendar, Package, Users, BarChart3, Settings, Wine, User, Building2, Bot } from "lucide-react";
+import { Home, Calendar, Package, Users, BarChart3, Settings, Wine, User, Building2, Bot, MessageSquare } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export function BottomNav() {
@@ -56,6 +56,12 @@ export function BottomNav() {
       icon: Bot,
       label: "Automações",
       path: "/automacoes",
+      roles: ['admin']
+    },
+    {
+      icon: MessageSquare,
+      label: "WhatsApp",
+      path: "/configuracoes/whatsapp",
       roles: ['admin']
     },
     {
